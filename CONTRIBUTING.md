@@ -34,4 +34,4 @@ All of Unity Autobilder's in-progress work happens on the `development` branch. 
 
 ### Code and other contributions
 
-Contributions to Unity Autobilder (via pull request or otherwise) must be licensed under the MIT license.
+Contributions to Unity Autobilder (via pull request or otherwise) must be licensed under the Apache 2 license.
