@@ -164,12 +164,12 @@ PlayerSettings:
   androidSupportedAspectRatio: 1
   androidMaxAspectRatio: 2.1
   applicationIdentifier:
-    Android: com.DefaultCompany.unityautobuilder_
+    Android: com.DefaultCompany.unityautobuilder
     iPhone: com.DefaultCompany.unity-autobuilder
   buildNumber:
-    Standalone: 2
-    iPhone: 1
-  AndroidBundleVersionCode: 2
+    Standalone: 4
+    iPhone: 2
+  AndroidBundleVersionCode: 6
   AndroidMinSdkVersion: 16
   AndroidTargetSdkVersion: 0
   AndroidPreferredInstallLocation: 1
@@ -184,7 +184,7 @@ PlayerSettings:
   keepLoadedShadersAlive: 0
   StripUnusedMeshComponents: 0
   VertexChannelCompressionMask: 214
-  iPhoneSdkVersion: 988
+  iPhoneSdkVersion: 989
   iOSTargetOSVersionString: 9.0
   tvOSSdkVersion: 0
   tvOSRequireExtendedGameController: 0
