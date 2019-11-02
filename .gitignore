@@ -21,6 +21,8 @@ ProjectSettings/ProjectVersion.txt
 obj/
 Tests
 publishing/ios/data/screens
+.vs/
+Builds/
 
 # Android build related
 Assets/StreamingAssets/

@@ -69,7 +69,29 @@ namespace Autobuilder
             }
         }
 
+#if UNITY_2019_1_OR_NEWER
+        [SettingsProvider]
+        public static SettingsProvider CreateMyCustomSettingsProvider() {
+            // First parameter is the path in the Settings window.
+            // Second parameter is the scope of this setting: it only appears in the Project Settings window.
+            var provider = new SettingsProvider("Preferences/Android Tools", SettingsScope.User) {
+                // By default the last token of the path is used as display name if no label is provided.
+                label = "Android Tools",
+                // Create the SettingsProvider and initialize its drawing (IMGUI) function in place:
+                guiHandler = (searchContext) =>
+                {
+                    PreferenceGUI();
+                },
+
+                // Populate the search keywords to enable smart search filtering and label highlighting:
+                keywords = new HashSet<string>(new[] { "Android", "ADB" })
+            };
+
+            return provider;
+        }
+#else
         [PreferenceItem("Android Tools")]
+#endif
         public static void PreferenceGUI()
         {
             GUILayout.BeginHorizontal();

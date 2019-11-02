@@ -7,10 +7,8 @@ using UnityEditor.Build.Reporting;
 #endif
 using UnityEngine;
 
-namespace Autobuilder
-{
-    public class Builder : EditorWindow
-    {
+namespace Autobuilder {
+    public class Builder : EditorWindow {
         const string BUILDER = "Autobuilder";
         const string BUILDS_PATH = BUILDER + "BuildsPath";
         const string FILENAME = BUILDER + "BuildFilename";
@@ -42,144 +40,116 @@ namespace Autobuilder
         const string BUILD_DIR_IOS = "/iOS";
 
         #region EditorPrefs
-        public static string BuildPath
-        {
-            get
-            {
+        public static string BuildPath {
+            get {
                 return EditorProjectPrefs.GetString(BUILDS_PATH, DEFAULT_BUILDS_PATH);
             }
             set { EditorProjectPrefs.SetString(BUILDS_PATH, value); }
         }
 
-        public static string FileName
-        {
-            get
-            {
+        public static string FileName {
+            get {
                 return EditorProjectPrefs.GetString(FILENAME,
                     PlayerSettings.productName);
             }
             set { EditorProjectPrefs.SetString(FILENAME, value); }
         }
 
-        public static int WindowsBuildNumber
-        {
+        public static int WindowsBuildNumber {
             get { return EditorProjectPrefs.GetInt(WIN_BUILD_NUMBER, 0); }
             set { EditorProjectPrefs.SetInt(WIN_BUILD_NUMBER, value); }
         }
 
-        public static int LinuxBuildNumber
-        {
+        public static int LinuxBuildNumber {
             get { return EditorProjectPrefs.GetInt(LINUX_BUILD_NUMBER, 0); }
             set { EditorProjectPrefs.SetInt(LINUX_BUILD_NUMBER, value); }
         }
 
-        public static int OSXBuildNumber
-        {
-            get
-            {
+        public static int OSXBuildNumber {
+            get {
                 int tVersion = 0;
                 int.TryParse(PlayerSettings.macOS.buildNumber, out tVersion);
                 return tVersion;
             }
-            set
-            {
+            set {
                 PlayerSettings.macOS.buildNumber = value.ToString();
             }
         }
 
-        public static int IOSBuildNumber
-        {
-            get
-            {
+        public static int IOSBuildNumber {
+            get {
                 int tVersion = 0;
                 int.TryParse(PlayerSettings.iOS.buildNumber, out tVersion);
                 return tVersion;
             }
-            set
-            {
+            set {
                 PlayerSettings.iOS.buildNumber = value.ToString();
             }
         }
 
-        public static string AndroidKeyAliasPass
-        {
+        public static string AndroidKeyAliasPass {
             get { return EditorProjectPrefs.GetString(ANDROID_KEYALIAS_PASS, PlayerSettings.Android.keyaliasPass); }
             set { EditorProjectPrefs.SetString(ANDROID_KEYALIAS_PASS, value); }
         }
-        public static string AndroidKeyStorePass
-        {
+        public static string AndroidKeyStorePass {
             get { return EditorProjectPrefs.GetString(ANDROID_KEYSTORE_PASS, PlayerSettings.Android.keystorePass); }
             set { EditorProjectPrefs.SetString(ANDROID_KEYSTORE_PASS, value); }
         }
 
         // Bools
-        public static bool BuildWin32
-        {
+        public static bool BuildWin32 {
             get { return EditorProjectPrefs.GetBool(BUILD_WIN_32, true); }
             set { EditorProjectPrefs.SetBool(BUILD_WIN_32, value); }
         }
-        public static bool BuildWin64
-        {
+        public static bool BuildWin64 {
             get { return EditorProjectPrefs.GetBool(BUILD_WIN_64, false); }
             set { EditorProjectPrefs.SetBool(BUILD_WIN_64, value); }
         }
-        public static bool BuildLinux32
-        {
+        public static bool BuildLinux32 {
             get { return EditorProjectPrefs.GetBool(BUILD_LINUX_32, true); }
             set { EditorProjectPrefs.SetBool(BUILD_LINUX_32, value); }
         }
-        public static bool BuildLinux64
-        {
+        public static bool BuildLinux64 {
             get { return EditorProjectPrefs.GetBool(BUILD_LINUX_64, false); }
             set { EditorProjectPrefs.SetBool(BUILD_LINUX_64, value); }
         }
-        public static bool BuildLinuxUniversal
-        {
+        public static bool BuildLinuxUniversal {
             get { return EditorProjectPrefs.GetBool(BUILD_LINUX_UNIVERSAL, false); }
             set { EditorProjectPrefs.SetBool(BUILD_LINUX_UNIVERSAL, value); }
         }
-        public static bool BuildOSX32
-        {
+        public static bool BuildOSX32 {
             get { return EditorProjectPrefs.GetBool(BUILD_OSX_32, true); }
             set { EditorProjectPrefs.SetBool(BUILD_OSX_32, value); }
         }
-        public static bool BuildOSX64
-        {
+        public static bool BuildOSX64 {
             get { return EditorProjectPrefs.GetBool(BUILD_OSX_64, false); }
             set { EditorProjectPrefs.SetBool(BUILD_OSX_64, value); }
         }
-        public static bool BuildOSXUniversal
-        {
+        public static bool BuildOSXUniversal {
             get { return EditorProjectPrefs.GetBool(BUILD_OSX_UNIVERSAL, false); }
             set { EditorProjectPrefs.SetBool(BUILD_OSX_UNIVERSAL, value); }
         }
-        public static bool BuildAndroid
-        {
+        public static bool BuildAndroid {
             get { return EditorProjectPrefs.GetBool(BUILD_ANDROID, true); }
             set { EditorProjectPrefs.SetBool(BUILD_ANDROID, value); }
         }
-        public static bool BuildIOS
-        {
+        public static bool BuildIOS {
             get { return EditorProjectPrefs.GetBool(BUILD_IOS, true); }
             set { EditorProjectPrefs.SetBool(BUILD_IOS, value); }
         }
-        public static bool RunAndroid
-        {
+        public static bool RunAndroid {
             get { return EditorProjectPrefs.GetBool(RUN_ANDROID, true); }
             set { EditorProjectPrefs.SetBool(RUN_ANDROID, value); }
         }
-        public static bool StartWithCurrent
-        {
+        public static bool StartWithCurrent {
             get { return EditorProjectPrefs.GetBool(START_WITH_CURRENT, true); }
             set { EditorProjectPrefs.SetBool(START_WITH_CURRENT, value); }
         }
-        public static bool EndWithCurrent
-        {
+        public static bool EndWithCurrent {
             get { return EditorProjectPrefs.GetBool(END_WITH_CURRENT, false); }
             set { EditorProjectPrefs.SetBool(END_WITH_CURRENT, value); }
         }
-        public static bool SwitchToCurrent
-        {
+        public static bool SwitchToCurrent {
             get { return EditorProjectPrefs.GetBool(SWITCH_TO_CURRENT, true); }
             set { EditorProjectPrefs.SetBool(SWITCH_TO_CURRENT, value); }
         }
@@ -187,22 +157,17 @@ namespace Autobuilder
 
         static Vector2 m_ScrollPos;
         static string m_DataPath;
-        static string DataPath
-        {
-            get
-            {
-                if (string.IsNullOrEmpty(m_DataPath))
+        static string DataPath {
+            get {
+                if ( string.IsNullOrEmpty(m_DataPath) )
                     m_DataPath = Application.dataPath.Substring(0, Application.dataPath.Length - "/Assets".Length);
                 return m_DataPath;
             }
         }
         GUIStyle m_AreaStyle;
-        GUIStyle AreaStyle
-        {
-            get
-            {
-                if (m_AreaStyle == null || m_AreaStyle.normal.background == null)
-                {
+        GUIStyle AreaStyle {
+            get {
+                if ( m_AreaStyle == null || m_AreaStyle.normal.background == null ) {
                     m_AreaStyle = new GUIStyle(EditorStyles.helpBox);
                 }
                 return m_AreaStyle;
@@ -210,20 +175,16 @@ namespace Autobuilder
         }
         GUIStyle m_SelectedAreaStyle;
         Texture2D m_SelectedTexture;
-        GUIStyle SelectedAreaStyle
-        {
-            get
-            {
-                if (m_SelectedAreaStyle == null)
-                {
+        GUIStyle SelectedAreaStyle {
+            get {
+                if ( m_SelectedAreaStyle == null ) {
                     m_SelectedAreaStyle = new GUIStyle(AreaStyle);
                     m_SelectedTexture = new Texture2D(1, 1);
                     m_SelectedTexture.SetPixel(0, 0, new Color(0.423f, 0.498f, 0.431f));
                     m_SelectedTexture.Apply();
                     m_SelectedAreaStyle.normal.background = m_SelectedTexture;
                 }
-                if (m_SelectedAreaStyle.normal.background == null)
-                {
+                if ( m_SelectedAreaStyle.normal.background == null ) {
                     m_SelectedTexture = new Texture2D(1, 1);
                     m_SelectedTexture.SetPixel(0, 0, new Color(0.423f, 0.498f, 0.431f));
                     m_SelectedTexture.Apply();
@@ -235,15 +196,13 @@ namespace Autobuilder
 
         [MenuItem("File/Autobuilder...")]
         [MenuItem("Tools/Autobuilder...")]
-        public static void ShowWindow()
-        {
+        public static void ShowWindow() {
             GetWindow<Builder>("Builder");
         }
 
-        private void OnGUI()
-        {
+        private void OnGUI() {
             GUILayout.Space(10);
-            System.Action<bool> tBuildFunction = null;
+            Action<bool> tBuildFunction = null;
             bool tDevelopment = false;
 
             EditorGUI.BeginChangeCheck();
@@ -261,15 +220,14 @@ namespace Autobuilder
 
             bool tStartWithCurrent = GUILayout.Toggle(StartWithCurrent, "Start with current platform");
             bool tEndWithCurrent = GUILayout.Toggle(EndWithCurrent, "End with current platform");
-            if (tStartWithCurrent && tEndWithCurrent)
-            {
-                if (!StartWithCurrent)
+            if ( tStartWithCurrent && tEndWithCurrent ) {
+                if ( !StartWithCurrent )
                     tEndWithCurrent = false;
-                else if (!EndWithCurrent)
+                else if ( !EndWithCurrent )
                     tStartWithCurrent = false;
             }
             SwitchToCurrent = GUILayout.Toggle(SwitchToCurrent, "Switch to current platform when done");
-            
+
             m_ScrollPos = GUILayout.BeginScrollView(m_ScrollPos);
             GUILayout.Label("Standalone", EditorStyles.boldLabel);
 
@@ -281,21 +239,18 @@ namespace Autobuilder
             GUILayout.BeginVertical(
                 EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows ? SelectedAreaStyle : AreaStyle);
             GUILayout.BeginHorizontal();
-            if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.StandaloneWindows)
-            {
-                if (GUILayout.Button("Windows", GUILayout.MaxWidth(tColumn0)))
+            if ( EditorUserBuildSettings.activeBuildTarget != BuildTarget.StandaloneWindows ) {
+                if ( GUILayout.Button("Windows", GUILayout.MaxWidth(tColumn0)) )
                     EditorUserBuildSettings.SwitchActiveBuildTargetAsync(BuildTargetGroup.Standalone,
                         BuildTarget.StandaloneWindows);
-            }
-            else
+            } else
                 GUILayout.Label("Windows", GUILayout.MaxWidth(tColumn0));
             GUILayout.Label("Build:", GUILayout.MaxWidth(tColumn1Half));
             int tWindowsBuild = EditorGUILayout.IntField(WindowsBuildNumber, GUILayout.MaxWidth(tColumn1Half));
-            if (GUILayout.Button("Build"))
-            {
+            if ( GUILayout.Button("Build") ) {
                 tBuildFunction = BuildGameWindows;
             }
-            if (GUILayout.Button("Development build"))
+            if ( GUILayout.Button("Development build") )
                 BuildGameWindows(true);
             GUILayout.EndHorizontal();
             EditorGUI.indentLevel++;
@@ -305,34 +260,39 @@ namespace Autobuilder
             GUILayout.EndVertical();
 
             // LINUX
+#if UNITY_2019_2_OR_NEWER
+            var linuxTarget = BuildTarget.StandaloneLinux64;
+#else
+            var linuxTarget = BuildTarget.StandaloneLinux;
+#endif
             GUILayout.BeginVertical(
-                EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneLinux ? SelectedAreaStyle : AreaStyle);
+                EditorUserBuildSettings.activeBuildTarget == linuxTarget ? SelectedAreaStyle : AreaStyle);
             GUILayout.BeginHorizontal();
-            if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.StandaloneLinux)
-            {
-                if (GUILayout.Button("Linux", GUILayout.MaxWidth(tColumn0)))
+            if ( EditorUserBuildSettings.activeBuildTarget != linuxTarget ) {
+                if ( GUILayout.Button("Linux", GUILayout.MaxWidth(tColumn0)) )
                     EditorUserBuildSettings.SwitchActiveBuildTargetAsync(BuildTargetGroup.Standalone,
-                        BuildTarget.StandaloneLinux);
-            }
-            else
+                        linuxTarget);
+            } else
                 GUILayout.Label("Linux", GUILayout.MaxWidth(tColumn0));
             GUILayout.Label("Build:", GUILayout.MaxWidth(tColumn1Half));
             int tLinuxBuild = EditorGUILayout.IntField(LinuxBuildNumber, GUILayout.MaxWidth(tColumn1Half));
-            if (GUILayout.Button("Build"))
-            {
+            if ( GUILayout.Button("Build") ) {
                 tBuildFunction = BuildGameLinux;
                 tDevelopment = false;
             }
-            if (GUILayout.Button("Development build"))
-            {
+            if ( GUILayout.Button("Development build") ) {
                 tBuildFunction = BuildGameLinux;
                 tDevelopment = true;
             }
             GUILayout.EndHorizontal();
             EditorGUI.indentLevel++;
+#if !UNITY_2019_2_OR_NEWER
             BuildLinux32 = EditorGUILayout.Toggle("Build 32 bit version", BuildLinux32);
+#endif
             BuildLinux64 = EditorGUILayout.Toggle("Build 64 bit version", BuildLinux64);
+#if !UNITY_2019_2_OR_NEWER
             BuildLinuxUniversal = EditorGUILayout.Toggle("Build universal version", BuildLinuxUniversal);
+#endif
             EditorGUI.indentLevel--;
             GUILayout.EndVertical();
 
@@ -340,31 +300,31 @@ namespace Autobuilder
             GUILayout.BeginVertical(
                 EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneOSX ? SelectedAreaStyle : AreaStyle);
             GUILayout.BeginHorizontal();
-            if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.StandaloneOSX)
-            {
-                if (GUILayout.Button("OSX", GUILayout.MaxWidth(tColumn0)))
+            if ( EditorUserBuildSettings.activeBuildTarget != BuildTarget.StandaloneOSX ) {
+                if ( GUILayout.Button("OSX", GUILayout.MaxWidth(tColumn0)) )
                     EditorUserBuildSettings.SwitchActiveBuildTargetAsync(BuildTargetGroup.Standalone,
                         BuildTarget.StandaloneOSX);
-            }
-            else
+            } else
                 GUILayout.Label("OSX", GUILayout.MaxWidth(tColumn0));
             GUILayout.Label("Build:", GUILayout.MaxWidth(tColumn1Half));
             int tOSXBuild = EditorGUILayout.IntField(OSXBuildNumber, GUILayout.MaxWidth(tColumn1Half));
-            if (GUILayout.Button("Build"))
-            {
+            if ( GUILayout.Button("Build") ) {
                 tBuildFunction = BuildGameOSX;
                 tDevelopment = false;
             }
-            if (GUILayout.Button("Development build"))
-            {
+            if ( GUILayout.Button("Development build") ) {
                 tBuildFunction = BuildGameOSX;
                 tDevelopment = true;
             }
             GUILayout.EndHorizontal();
             EditorGUI.indentLevel++;
+#if !UNITY_2017_3_OR_NEWER
             BuildOSX32 = EditorGUILayout.Toggle("Build 32 bit version", BuildOSX32);
+#endif
             BuildOSX64 = EditorGUILayout.Toggle("Build 64 bit version", BuildOSX64);
+#if !UNITY_2017_3_OR_NEWER
             BuildOSXUniversal = EditorGUILayout.Toggle("Build universal version", BuildOSXUniversal);
+#endif
             EditorGUI.indentLevel--;
             GUILayout.EndVertical();
 
@@ -374,25 +334,21 @@ namespace Autobuilder
             GUILayout.BeginVertical(
                 EditorUserBuildSettings.activeBuildTarget == BuildTarget.Android ? SelectedAreaStyle : AreaStyle);
             GUILayout.BeginHorizontal();
-            if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android)
-            {
-                if (GUILayout.Button("Android", GUILayout.MaxWidth(tColumn0)))
+            if ( EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android ) {
+                if ( GUILayout.Button("Android", GUILayout.MaxWidth(tColumn0)) )
                     EditorUserBuildSettings.SwitchActiveBuildTargetAsync(BuildTargetGroup.Android,
                         BuildTarget.Android);
-            }
-            else
+            } else
                 GUILayout.Label("Android", EditorStyles.boldLabel, GUILayout.MaxWidth(tColumn0));
             GUILayout.Label("Build:", GUILayout.MaxWidth(tColumn1Half));
             PlayerSettings.Android.bundleVersionCode = EditorGUILayout.IntField(
                     PlayerSettings.Android.bundleVersionCode, GUILayout.MaxWidth(tColumn1Half));
-            if (GUILayout.Button("Build"))
-            {
+            if ( GUILayout.Button("Build") ) {
                 BuildAndroid = true;
                 tBuildFunction = BuildGameAndroid;
                 tDevelopment = false;
             }
-            if (GUILayout.Button("Development build"))
-            {
+            if ( GUILayout.Button("Development build") ) {
                 BuildAndroid = true;
                 tBuildFunction = BuildGameAndroid;
                 tDevelopment = true;
@@ -402,7 +358,7 @@ namespace Autobuilder
             BuildAndroid = EditorGUILayout.Toggle("Build android version", BuildAndroid);
             GUILayout.BeginHorizontal();
             RunAndroid = EditorGUILayout.Toggle("Install and run on device", RunAndroid);
-            if (GUILayout.Button("Install last version"))
+            if ( GUILayout.Button("Install last version") )
                 AndroidInterfaceTool.InstallLastBuild();
             GUILayout.EndHorizontal();
             string tAndroiddentifier = EditorGUILayout.TextField("Bundle identifier",
@@ -416,37 +372,32 @@ namespace Autobuilder
             GUILayout.BeginVertical(
                 EditorUserBuildSettings.activeBuildTarget == BuildTarget.iOS ? SelectedAreaStyle : AreaStyle);
             GUILayout.BeginHorizontal();
-            if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.iOS)
-            {
-                if (GUILayout.Button("iOS", GUILayout.MaxWidth(tColumn0)))
+            if ( EditorUserBuildSettings.activeBuildTarget != BuildTarget.iOS ) {
+                if ( GUILayout.Button("iOS", GUILayout.MaxWidth(tColumn0)) )
                     EditorUserBuildSettings.SwitchActiveBuildTargetAsync(BuildTargetGroup.iOS,
                         BuildTarget.iOS);
-            }
-            else
+            } else
                 GUILayout.Label("iOS", EditorStyles.boldLabel, GUILayout.MaxWidth(tColumn0));
             GUILayout.Label("Build:", GUILayout.MaxWidth(tColumn1Half));
             IOSBuildNumber = EditorGUILayout.IntField(
                     IOSBuildNumber, GUILayout.MaxWidth(tColumn1Half));
-            if (GUILayout.Button("Build"))
-            {
+            if ( GUILayout.Button("Build") ) {
                 BuildIOS = true;
                 tBuildFunction = BuildGameIOS;
                 tDevelopment = false;
-                PlayerSettings.iOS.sdkVersion =iOSSdkVersion.DeviceSDK;
+                PlayerSettings.iOS.sdkVersion = iOSSdkVersion.DeviceSDK;
             }
-            if (GUILayout.Button("Development build"))
-            {
+            if ( GUILayout.Button("Development build") ) {
                 BuildIOS = true;
                 tBuildFunction = BuildGameIOS;
                 tDevelopment = true;
-                PlayerSettings.iOS.sdkVersion =iOSSdkVersion.DeviceSDK;
+                PlayerSettings.iOS.sdkVersion = iOSSdkVersion.DeviceSDK;
             }
-            if (GUILayout.Button("Simulator build"))
-            {
+            if ( GUILayout.Button("Simulator build") ) {
                 BuildIOS = true;
                 tBuildFunction = BuildGameIOS;
                 tDevelopment = true;
-                PlayerSettings.iOS.sdkVersion =iOSSdkVersion.SimulatorSDK;
+                PlayerSettings.iOS.sdkVersion = iOSSdkVersion.SimulatorSDK;
             }
             GUILayout.EndHorizontal();
             EditorGUI.indentLevel++;
@@ -456,8 +407,7 @@ namespace Autobuilder
             EditorGUI.indentLevel--;
             GUILayout.EndVertical();
 
-            if (EditorGUI.EndChangeCheck())
-            {
+            if ( EditorGUI.EndChangeCheck() ) {
                 StartWithCurrent = tStartWithCurrent;
                 EndWithCurrent = tEndWithCurrent;
                 BuildPath = PathFunctions.GetRelativePath(tBuildPath, DataPath);
@@ -471,35 +421,29 @@ namespace Autobuilder
             GUILayout.EndScrollView();
             // Buttons
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Player settings"))
-            {
+#if !UNITY_2018_1_OR_NEWER
+            if ( GUILayout.Button("Player settings") ) {
                 EditorApplication.ExecuteMenuItem("Edit/Project Settings/Player");
             }
-            if (GUILayout.Button("Build settings"))
-            {
+#endif
+            if ( GUILayout.Button("Build settings") ) {
                 GetWindow<BuildPlayerWindow>();
             }
-            if (GUILayout.Button("Build ALL"))
-            {
+            if ( GUILayout.Button("Build ALL") ) {
                 tBuildFunction = BuildGameAll;
                 tDevelopment = false;
             }
-            if (GUILayout.Button("Build ALL development"))
-            {
+            if ( GUILayout.Button("Build ALL development") ) {
                 tBuildFunction = BuildGameAll;
                 tDevelopment = true;
             }
             GUILayout.EndHorizontal();
 
-            if (tBuildFunction != null)
-            {
-                tBuildFunction(tDevelopment);
-            }
+            tBuildFunction?.Invoke(tDevelopment);
         }
 
-        public static void BuildGameAll(bool aDevelopment)
-        {
-            List<System.Action<bool>> tBuildOrder = new List<System.Action<bool>>
+        public static void BuildGameAll(bool aDevelopment) {
+            List<Action<bool>> tBuildOrder = new List<Action<bool>>
             {
                 BuildGameWindows,
                 BuildGameLinux,
@@ -508,68 +452,49 @@ namespace Autobuilder
             };
             BuildTarget tCurrent = EditorUserBuildSettings.activeBuildTarget;
             BuildTargetGroup tCurrentGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
-            if (StartWithCurrent)
-            {
-                if (tCurrent == BuildTarget.Android && BuildAndroid)
-                {
+            if ( StartWithCurrent ) {
+                if ( tCurrent == BuildTarget.Android && BuildAndroid ) {
                     tBuildOrder.Remove(BuildGameAndroid);
                     tBuildOrder.Insert(0, BuildGameAndroid);
-                }
-                else if (TargetIsLinux(tCurrent) && (BuildLinux32 || BuildLinux64 || BuildLinuxUniversal))
-                {
+                } else if ( TargetIsLinux(tCurrent) && (BuildLinux32 || BuildLinux64 || BuildLinuxUniversal) ) {
                     tBuildOrder.Remove(BuildGameLinux);
                     tBuildOrder.Insert(0, BuildGameLinux);
-                }
-                else if (TargetIsOSX(tCurrent) && (BuildOSX32 || BuildOSX64 || BuildOSXUniversal))
-                {
+                } else if ( TargetIsOSX(tCurrent) && (BuildOSX32 || BuildOSX64 || BuildOSXUniversal) ) {
                     tBuildOrder.Remove(BuildGameOSX);
                     tBuildOrder.Insert(0, BuildGameOSX);
-                }
-                else if (TargetIsWindows(tCurrent) && (BuildWin32 || BuildWin64))
-                {
+                } else if ( TargetIsWindows(tCurrent) && (BuildWin32 || BuildWin64) ) {
                     tBuildOrder.Remove(BuildGameWindows);
                     tBuildOrder.Insert(0, BuildGameWindows);
                 }
             }
-            if (EndWithCurrent)
-            {
-                if (tCurrent == BuildTarget.Android && BuildAndroid)
-                {
+            if ( EndWithCurrent ) {
+                if ( tCurrent == BuildTarget.Android && BuildAndroid ) {
                     tBuildOrder.Remove(BuildGameAndroid);
                     tBuildOrder.Add(BuildGameAndroid);
-                }
-                else if (TargetIsLinux(tCurrent) && (BuildLinux32 || BuildLinux64 || BuildLinuxUniversal))
-                {
+                } else if ( TargetIsLinux(tCurrent) && (BuildLinux32 || BuildLinux64 || BuildLinuxUniversal) ) {
                     tBuildOrder.Remove(BuildGameLinux);
                     tBuildOrder.Add(BuildGameLinux);
-                }
-                else if (TargetIsOSX(tCurrent) && (BuildOSX32 || BuildOSX64 || BuildOSXUniversal))
-                {
+                } else if ( TargetIsOSX(tCurrent) && (BuildOSX32 || BuildOSX64 || BuildOSXUniversal) ) {
                     tBuildOrder.Remove(BuildGameOSX);
                     tBuildOrder.Add(BuildGameOSX);
-                }
-                else if (TargetIsWindows(tCurrent) && (BuildWin32 || BuildWin64))
-                {
+                } else if ( TargetIsWindows(tCurrent) && (BuildWin32 || BuildWin64) ) {
                     tBuildOrder.Remove(BuildGameWindows);
                     tBuildOrder.Add(BuildGameWindows);
                 }
             }
 
-            foreach (System.Action<bool> tBuild in tBuildOrder)
+            foreach ( Action<bool> tBuild in tBuildOrder )
                 tBuild(aDevelopment);
 
-            if (SwitchToCurrent)
-            {
+            if ( SwitchToCurrent ) {
                 EditorUserBuildSettings.SwitchActiveBuildTargetAsync(tCurrentGroup, tCurrent);
             }
         }
 
-        public static void BuildGameWindows(bool aDevelopment = false)
-        {
+        public static void BuildGameWindows(bool aDevelopment = false) {
             // Add build number
-            if (BuildWin32 || BuildWin64)
-            {
-                if (!aDevelopment)
+            if ( BuildWin32 || BuildWin64 ) {
+                if ( !aDevelopment )
                     AddBuildNumber(BuildTarget.StandaloneWindows);
                 EditorProjectPrefs.Save();
 #if UNITY_2018_1_OR_NEWER
@@ -579,28 +504,26 @@ namespace Autobuilder
                 string tResult = "";
                 string tReport;
 #endif
-                if (BuildWin32)
-                {
+                if ( BuildWin32 ) {
                     tReport = BuildGame(BuildTarget.StandaloneWindows, aDevelopment);
 #if UNITY_2018_1_OR_NEWER
-                    if (tReport.summary.result != BuildResult.Succeeded)
+                    if ( tReport.summary.result != BuildResult.Succeeded )
                         tResult = BuildResult.Failed;
 #else
                     tResult += tReport;
 #endif
                 }
-                if (BuildWin64)
-                {
+                if ( BuildWin64 ) {
                     tReport = BuildGame(BuildTarget.StandaloneWindows64, aDevelopment);
 #if UNITY_2018_1_OR_NEWER
-                    if (tReport.summary.result != BuildResult.Succeeded)
+                    if ( tReport.summary.result != BuildResult.Succeeded )
                         tResult = BuildResult.Failed;
 #else
                     tResult += tReport;
 #endif
                 }
 #if UNITY_2018_1_OR_NEWER
-                if (tResult != BuildResult.Succeeded && !aDevelopment)
+                if ( tResult != BuildResult.Succeeded && !aDevelopment )
 #else
                 if (!string.IsNullOrEmpty(tResult) && !aDevelopment)
 #endif
@@ -608,19 +531,17 @@ namespace Autobuilder
             }
         }
 
-        public static void BuildGameOSX(bool aDevelopment = false)
-        {
+        public static void BuildGameOSX(bool aDevelopment = false) {
             // Add build number
-            if (BuildOSX32 || BuildOSX64 || BuildOSXUniversal)
-            {
+            if ( BuildOSX32 || BuildOSX64 || BuildOSXUniversal ) {
 #if UNITY_2017_3_OR_NEWER
-                if (!aDevelopment)
+                if ( !aDevelopment )
                     AddBuildNumber(BuildTarget.StandaloneOSX);
                 EditorProjectPrefs.Save();
 #if UNITY_2018_1_OR_NEWER
                 BuildReport tReport = BuildGame(BuildTarget.StandaloneOSX, aDevelopment);
 
-                if (tReport.summary.result != BuildResult.Succeeded && !aDevelopment)
+                if ( tReport.summary.result != BuildResult.Succeeded && !aDevelopment )
 #else
                 string tReport = BuildGame(BuildTarget.StandaloneOSX, aDevelopment);
 
@@ -644,13 +565,15 @@ namespace Autobuilder
             }
         }
 
-        public static void BuildGameLinux(bool aDevelopment = false)
-        {
-            if (BuildLinux32 || BuildLinux64 || BuildLinuxUniversal)
-            {
+        public static void BuildGameLinux(bool aDevelopment = false) {
+            if ( BuildLinux32 || BuildLinux64 || BuildLinuxUniversal ) {
                 // Add build number
-                if (!aDevelopment)
+                if ( !aDevelopment )
+#if UNITY_2019_2_OR_NEWER
+                    AddBuildNumber(BuildTarget.StandaloneLinux64);
+#else
                     AddBuildNumber(BuildTarget.StandaloneLinux);
+#endif
                 EditorProjectPrefs.Save();
                 // Build Game
 #if UNITY_2018_1_OR_NEWER
@@ -660,84 +583,85 @@ namespace Autobuilder
                 string tResult = "";
                 string tReport;
 #endif
-                if (BuildLinux32)
-                {
-					tReport = BuildGame(BuildTarget.StandaloneLinux, aDevelopment);
+
+#if !UNITY_2019_2_OR_NEWER
+                if ( BuildLinux32 ) {
+                    tReport = BuildGame(BuildTarget.StandaloneLinux, aDevelopment);
 #if UNITY_2018_1_OR_NEWER
-                    if (tReport.summary.result != BuildResult.Succeeded)
+                    if ( tReport.summary.result != BuildResult.Succeeded )
                         tResult = BuildResult.Failed;
 #else
                     tResult += tReport;
 #endif
-
                 }
-                if (BuildLinux64)
-                {
+#endif
+                if ( BuildLinux64 ) {
                     tReport = BuildGame(BuildTarget.StandaloneLinux64, aDevelopment);
 #if UNITY_2018_1_OR_NEWER
-                    if (tReport.summary.result != BuildResult.Succeeded)
+                    if ( tReport.summary.result != BuildResult.Succeeded )
                         tResult = BuildResult.Failed;
 #else
                     tResult += tReport;
 #endif
                 }
-                if (BuildLinuxUniversal)
-                {
+
+#if !UNITY_2019_2_OR_NEWER
+                if ( BuildLinuxUniversal ) {
                     tReport = BuildGame(BuildTarget.StandaloneLinuxUniversal, aDevelopment);
 #if UNITY_2018_1_OR_NEWER
-                    if (tReport.summary.result != BuildResult.Succeeded)
+                    if ( tReport.summary.result != BuildResult.Succeeded )
                         tResult = BuildResult.Failed;
 #else
                     tResult += tReport;
 #endif
                 }
+#endif
 #if UNITY_2018_1_OR_NEWER
-                if (tResult != BuildResult.Succeeded && !aDevelopment)
+                if ( tResult != BuildResult.Succeeded && !aDevelopment )
 #else
                 if (!string.IsNullOrEmpty(tResult) && !aDevelopment)
 #endif
+#if UNITY_2019_2_OR_NEWER
+                    SubtractBuildNumber(BuildTarget.StandaloneLinux64);
+#else
                     SubtractBuildNumber(BuildTarget.StandaloneLinux);
+#endif
             }
         }
 
-        public static void BuildGameAndroid(bool aDevelopment = false)
-        {
-            if (BuildAndroid)
-            {
+        public static void BuildGameAndroid(bool aDevelopment = false) {
+            if ( BuildAndroid ) {
                 PlayerSettings.Android.keystorePass = AndroidKeyStorePass;
                 PlayerSettings.Android.keyaliasPass = AndroidKeyAliasPass;
                 // Add build number
-                if (!aDevelopment)
+                if ( !aDevelopment )
                     AddBuildNumber(BuildTarget.Android);
                 EditorProjectPrefs.Save();
                 // Build Game
 #if UNITY_2018_1_OR_NEWER
                 BuildReport tReport = BuildGame(BuildTarget.Android, aDevelopment);
-                if (tReport.summary.result == BuildResult.Succeeded)
+                if ( tReport.summary.result == BuildResult.Succeeded )
 #else
                 string tReport = BuildGame(BuildTarget.Android, aDevelopment);
                 if (string.IsNullOrEmpty(tReport))
 #endif
                 {
-                    if (RunAndroid)
+                    if ( RunAndroid )
                         AndroidInterfaceTool.InstallToDevice(GetBuildPath(BuildTarget.Android, aDevelopment));
-                }
-                else if (!aDevelopment)
+                } else if ( !aDevelopment )
                     SubtractBuildNumber(BuildTarget.Android);
             }
         }
 
-        public static void BuildGameIOS(bool aDevelopment = false)
-        {
-            if (BuildIOS)
-            {
-                if (!aDevelopment)
+        public static void BuildGameIOS(bool aDevelopment = false) {
+            if ( BuildIOS ) {
+                if ( !aDevelopment )
                     AddBuildNumber(BuildTarget.iOS);
                 EditorProjectPrefs.Save();
                 // Build Game
 #if UNITY_2018_1_OR_NEWER
                 BuildReport tReport = BuildGame(BuildTarget.iOS, aDevelopment);
-                if (!aDevelopment && tReport.summary.result != BuildResult.Succeeded)
+                if ( !aDevelopment && tReport.summary.result != BuildResult.Succeeded )
 #else
                 string tReport = BuildGame(BuildTarget.iOS, aDevelopment);
                 if (!aDevelopment && !string.IsNullOrEmpty(tReport))
@@ -755,14 +679,12 @@ namespace Autobuilder
             // Build player
             List<string> tScenes = new List<string>();
 
-            for (int i = 0; i < EditorBuildSettings.scenes.Length; i++)
-            {
-                if (EditorBuildSettings.scenes[i].enabled)
+            for ( int i = 0; i < EditorBuildSettings.scenes.Length; i++ ) {
+                if ( EditorBuildSettings.scenes[i].enabled )
                     tScenes.Add(EditorBuildSettings.scenes[i].path);
             }
 
-            BuildPlayerOptions tOptions = new BuildPlayerOptions
-            {
+            BuildPlayerOptions tOptions = new BuildPlayerOptions {
                 locationPathName = GetBuildPath(aTarget, aDevelopment),
                 target = aTarget,
                 options = (aDevelopment ? BuildOptions.Development | BuildOptions.AllowDebugging
@@ -772,11 +694,11 @@ namespace Autobuilder
 
             // Pre processors
             RunPreProcessor(aTarget, aDevelopment);
-            
+
 #if UNITY_2018_1_OR_NEWER
             BuildReport tReport = BuildPipeline.BuildPlayer(tOptions);
             Debug.Log("Build " + aTarget + ": " + tReport.summary.result);
-            if (tReport.summary.result == BuildResult.Succeeded)
+            if ( tReport.summary.result == BuildResult.Succeeded )
 #else
             string tReport = BuildPipeline.BuildPlayer(tOptions);
             Debug.Log("Build " + aTarget + ": " + tReport);
@@ -793,26 +715,23 @@ namespace Autobuilder
             return tReport;
         }
 
-        static void AddBuildNumber(BuildTarget aTarget, int aValue)
-        {
-            if (aTarget == BuildTarget.Android)
+        static void AddBuildNumber(BuildTarget aTarget, int aValue) {
+            if ( aTarget == BuildTarget.Android )
                 PlayerSettings.Android.bundleVersionCode += aValue;
-            else if (aTarget == BuildTarget.iOS)
+            else if ( aTarget == BuildTarget.iOS )
                 IOSBuildNumber += aValue;
-            else if (TargetIsOSX(aTarget))
+            else if ( TargetIsOSX(aTarget) )
                 OSXBuildNumber += aValue;
-            else if (TargetIsWindows(aTarget))
+            else if ( TargetIsWindows(aTarget) )
                 WindowsBuildNumber += aValue;
-            else if (TargetIsLinux(aTarget))
+            else if ( TargetIsLinux(aTarget) )
                 LinuxBuildNumber += aValue;
         }
 
         // Currently not working
-        static void RunPreProcessor(BuildTarget aTarget, bool aDevelopment)
-        {
-            foreach (Type type in AttributeFinder.GetTypesWithAttribute<BuildPreProcessAttribute>(AppDomain.CurrentDomain))
-            {
-                if (type.IsSubclassOf(typeof(IBuildPreProcessor)))
+        static void RunPreProcessor(BuildTarget aTarget, bool aDevelopment) {
+            foreach ( Type type in AttributeFinder.GetTypesWithAttribute<BuildPreProcessAttribute>(AppDomain.CurrentDomain) ) {
+                if ( type.IsSubclassOf(typeof(IBuildPreProcessor)) )
                     ((IBuildPreProcessor)Activator.CreateInstance(type)).PreProcess(aTarget, aDevelopment);
             }
         }
@@ -823,39 +742,37 @@ namespace Autobuilder
         static void RunPostProcessor(BuildTarget aTarget, bool aDevelopment, string aReport)
 #endif
         {
-            foreach (Type type in AttributeFinder.GetTypesWithAttribute<BuildPostProcessAttribute>(AppDomain.CurrentDomain))
-            {
-                if (type.IsSubclassOf(typeof(IBuildPostProcessor)))
+            foreach ( Type type in AttributeFinder.GetTypesWithAttribute<BuildPostProcessAttribute>(AppDomain.CurrentDomain) ) {
+                if ( type.IsSubclassOf(typeof(IBuildPostProcessor)) )
                     ((IBuildPostProcessor)Activator.CreateInstance(type)).PostProcess(aTarget, aDevelopment, aReport);
             }
         }
 
-        static void AddBuildNumber(BuildTarget aTarget)
-        {
+        static void AddBuildNumber(BuildTarget aTarget) {
             AddBuildNumber(aTarget, 1);
         }
 
-        static void SubtractBuildNumber(BuildTarget aTarget)
-        {
+        static void SubtractBuildNumber(BuildTarget aTarget) {
             AddBuildNumber(aTarget, -1);
         }
 
-        public static string GetBuildPath(BuildTarget aTarget, bool aDevelopment)
-        {
+        public static string GetBuildPath(BuildTarget aTarget, bool aDevelopment) {
             string tPath = DataPath + "/" + BuildPath;
             // Directory
-            if (aTarget == BuildTarget.StandaloneWindows)
+            if ( aTarget == BuildTarget.StandaloneWindows )
                 tPath += BUILD_DIR_WINDOWS;
-            else if (aTarget == BuildTarget.StandaloneWindows64)
+            else if ( aTarget == BuildTarget.StandaloneWindows64 )
                 tPath += BUILD_DIR_WINDOWS + BUILD_64;
-            else if (aTarget == BuildTarget.StandaloneLinux)
+#if !UNITY_2019_2_OR_NEWER
+            else if ( aTarget == BuildTarget.StandaloneLinux )
                 tPath += BUILD_DIR_LINUX;
-            else if (aTarget == BuildTarget.StandaloneLinux64)
-                tPath += BUILD_DIR_LINUX + BUILD_64;
-            else if (aTarget == BuildTarget.StandaloneLinuxUniversal)
+            else if ( aTarget == BuildTarget.StandaloneLinuxUniversal )
                 tPath += BUILD_DIR_LINUX + BUILD_UNIVERSAL;
+#endif
+            else if ( aTarget == BuildTarget.StandaloneLinux64 )
+                tPath += BUILD_DIR_LINUX + BUILD_64;
 #if UNITY_2017_3_OR_NEWER
-            else if (aTarget == BuildTarget.StandaloneOSX)
+            else if ( aTarget == BuildTarget.StandaloneOSX )
                 tPath += BUILD_DIR_OSX;
 #else
             else if (aTarget == BuildTarget.StandaloneOSXIntel)
@@ -865,67 +782,64 @@ namespace Autobuilder
             else if (aTarget == BuildTarget.StandaloneOSXUniversal)
                 tPath += BUILD_DIR_OSX + BUILD_UNIVERSAL;
 #endif
-            else if (aTarget == BuildTarget.Android)
+            else if ( aTarget == BuildTarget.Android )
                 tPath += BUILD_DIR_ANDROID;
-            else if (aTarget == BuildTarget.iOS)
+            else if ( aTarget == BuildTarget.iOS )
                 tPath += BUILD_DIR_IOS;
-            
-            if (aTarget == BuildTarget.iOS)
-            {
-                if (aDevelopment)
+
+            if ( aTarget == BuildTarget.iOS ) {
+                if ( aDevelopment )
                     tPath += "_simulator";
-            }
-            else
-            {
-                if (aDevelopment)
+            } else {
+                if ( aDevelopment )
                     tPath += "/dev";
-                else
-                {
+                else {
                     // Build version
                     tPath += "/b";
-                    if (aTarget == BuildTarget.Android)
+                    if ( aTarget == BuildTarget.Android )
                         tPath += PlayerSettings.Android.bundleVersionCode;
-                    else if (TargetIsOSX(aTarget))
+                    else if ( TargetIsOSX(aTarget) )
                         tPath += PlayerSettings.macOS.buildNumber;
-                    else if (TargetIsLinux(aTarget))
+                    else if ( TargetIsLinux(aTarget) )
                         tPath += LinuxBuildNumber.ToString();
-                    else if (TargetIsWindows(aTarget))
+                    else if ( TargetIsWindows(aTarget) )
                         tPath += WindowsBuildNumber;
                 }
             }
 
-            if (!Directory.Exists(tPath))
+            if ( !Directory.Exists(tPath) )
                 Directory.CreateDirectory(tPath);
 
             // File
             tPath += "/";
-            if (aTarget == BuildTarget.Android)
+            if ( aTarget == BuildTarget.Android )
                 tPath += FileName + ".apk";
-            else if (TargetIsOSX(aTarget))
+            else if ( TargetIsOSX(aTarget) )
                 tPath += FileName;
-            else if (TargetIsLinux(aTarget))
+            else if ( TargetIsLinux(aTarget) )
                 tPath += FileName;
-            else if (TargetIsWindows(aTarget))
+            else if ( TargetIsWindows(aTarget) )
                 tPath += FileName + ".exe";
 
             return tPath;
         }
 
-        static bool TargetIsWindows(BuildTarget aTarget)
-        {
+        static bool TargetIsWindows(BuildTarget aTarget) {
             return aTarget == BuildTarget.StandaloneWindows
                     || aTarget == BuildTarget.StandaloneWindows64;
         }
 
-        static bool TargetIsLinux(BuildTarget aTarget)
-        {
+        static bool TargetIsLinux(BuildTarget aTarget) {
+#if UNITY_2019_2_OR_NEWER
+            return aTarget == BuildTarget.StandaloneLinux64;
+#else
             return aTarget == BuildTarget.StandaloneLinux
                     || aTarget == BuildTarget.StandaloneLinux64
                     || aTarget == BuildTarget.StandaloneLinuxUniversal;
+#endif
         }
 
-        static bool TargetIsOSX(BuildTarget aTarget)
-        {
+        static bool TargetIsOSX(BuildTarget aTarget) {
 #if UNITY_2017_3_OR_NEWER
             return aTarget == BuildTarget.StandaloneOSX;
 #else
