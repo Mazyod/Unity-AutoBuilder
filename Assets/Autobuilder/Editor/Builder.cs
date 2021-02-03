@@ -64,6 +64,7 @@ namespace Autobuilder {
             new AndroidModule(),
             new IOSModule(),
             new TVOSModule(),
+            new WebGLModule(),
         };
 
         static Vector2 m_ScrollPos;
