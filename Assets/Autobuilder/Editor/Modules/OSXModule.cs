@@ -56,31 +56,25 @@ namespace Autobuilder {
 #endif
         }
 
-        public void BuildGame(bool aDevelopment = false) {
+        public bool BuildGame(bool aDevelopment = false) {
             // Add build number
-            if ( !Enabled ) return;
+            if ( !Enabled ) return false;
 
 #if UNITY_2017_3_OR_NEWER
-            if ( !aDevelopment ) {
-                BuildNumber++;
-            }
-#if UNITY_2018_1_OR_NEWER
+#   if UNITY_2018_1_OR_NEWER
             BuildReport tReport = Builder.BuildGame(BuildTarget.StandaloneOSX,
                 GetBuildPath(false, false, aDevelopment), aDevelopment);
 
-            if ( tReport.summary.result != BuildResult.Succeeded && !aDevelopment )
-#else
+            if ( tReport.summary.result != BuildResult.Succeeded )
+#   else
             string tReport = BuildGame(BuildTarget.StandaloneOSX,
                 GetBuildPath(false, false, aDevelopment), aDevelopment);
 
-            if (!string.IsNullOrEmpty(tReport) && !aDevelopment)
-#endif
-                BuildNumber--;
+            if ( !string.IsNullOrEmpty(tReport) )
+#   endif
+                return false;
 #else
             string tError = "";
-            if (!aDevelopment) {
-                BuildNumber++;
-            }
             
             if (BuildOSX32) {
                 tError += BuildGame(BuildTarget.StandaloneOSXIntel,
@@ -95,9 +89,10 @@ namespace Autobuilder {
                     GetBuildPath(false, true, aDevelopment), aDevelopment);
             }
             if (!string.IsNullOrEmpty(tError)) {
-                BuildNumber--;
+                return false;
             }
 #endif
+            return true;
         }
 
         public string GetBuildPath(bool x64bits, bool aUniversal, bool aDevelopment) {

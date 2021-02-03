@@ -9,6 +9,6 @@ namespace Autobuilder {
         bool Enabled { get; set; }
         int BuildNumber { get; set; }
         void OnGUI(out bool aBuild, out bool aDevelopment);
-        void BuildGame(bool aDevelopment = false);
+        bool BuildGame(bool aDevelopment = false); // Returns true if successfull
     }
 }

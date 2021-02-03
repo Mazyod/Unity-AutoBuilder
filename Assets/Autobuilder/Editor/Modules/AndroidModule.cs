@@ -41,30 +41,29 @@ namespace Autobuilder {
             return aTarget == BuildTarget.Android;
         }
 
-        public void BuildGame(bool aDevelopment = false) {
+        public bool BuildGame(bool aDevelopment = false) {
             PlayerSettings.Android.keystorePass = AndroidKeyStorePass;
             PlayerSettings.Android.keyaliasPass = AndroidKeyAliasPass;
-            // Add build number
-            if ( !aDevelopment ) {
-                BuildNumber++;
-            }
+
             // Build Game
 #if UNITY_2018_1_OR_NEWER
             BuildReport tReport = Builder.BuildGame(BuildTarget.Android,
                 GetBuildPath(aDevelopment), aDevelopment);
             if ( tReport.summary.result == BuildResult.Succeeded )
 #else
-                string tReport = BuildGame(BuildTarget.Android,
-                    GetBuildPath(aDevelopment), aDevelopment);
-                if (string.IsNullOrEmpty(tReport))
+            string tReport = BuildGame(BuildTarget.Android,
+                GetBuildPath(aDevelopment), aDevelopment);
+            if (string.IsNullOrEmpty(tReport))
 #endif
             {
                 if ( RunAndroid ) {
                     AndroidInterfaceTool.InstallToDevice(
                         GetBuildPath(aDevelopment));
                 }
-            } else if ( !aDevelopment )
-                BuildNumber--;
+                return true;
+            } else {
+                return false;
+            }
         }
 
         public string GetBuildPath(bool aDevelopment) {

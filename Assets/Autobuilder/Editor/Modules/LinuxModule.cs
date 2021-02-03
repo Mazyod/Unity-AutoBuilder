@@ -37,7 +37,10 @@ namespace Autobuilder {
 
         public int BuildNumber {
             get { return EditorProjectPrefs.GetInt(LINUX_BUILD_NUMBER, 0); }
-            set { EditorProjectPrefs.SetInt(LINUX_BUILD_NUMBER, value); }
+            set {
+                EditorProjectPrefs.SetInt(LINUX_BUILD_NUMBER, value);
+                EditorProjectPrefs.Save();
+            }
         }
 
         public bool IsTarget(BuildTarget aTarget) {
@@ -50,14 +53,9 @@ namespace Autobuilder {
 #endif
         }
 
-        public void BuildGame(bool aDevelopment = false) {
-            if ( !Enabled ) return;
+        public bool BuildGame(bool aDevelopment = false) {
+            if ( !Enabled ) return false;
 
-            // Add build number
-            if ( !aDevelopment ) {
-                BuildNumber++;
-                EditorProjectPrefs.Save();
-            }
             // Build Game
 #if UNITY_2018_1_OR_NEWER
             BuildResult tResult = BuildResult.Succeeded;
@@ -103,14 +101,14 @@ namespace Autobuilder {
             }
 #endif
 #if UNITY_2018_1_OR_NEWER
-            if ( tResult != BuildResult.Succeeded && !aDevelopment )
+            if ( tResult != BuildResult.Succeeded )
 #else
-            if (!string.IsNullOrEmpty(tResult) && !aDevelopment)
+            if ( !string.IsNullOrEmpty(tResult) )
 #endif
             {
-                BuildNumber--;
-                EditorProjectPrefs.Save();
+                return false;
             }
+            return true;
         }
 
         public string GetBuildPath(bool x64bits, bool aUniversal, bool aDevelopment) {

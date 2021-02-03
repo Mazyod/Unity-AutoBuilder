@@ -16,6 +16,7 @@ namespace Autobuilder {
         const string START_WITH_CURRENT = BUILDER + "StartWithCurrent";
         const string END_WITH_CURRENT = BUILDER + "EndWithCurrent";
         const string SWITCH_TO_CURRENT = BUILDER + "SwitchToCurrent";
+        const string AUTO_INCREASE_BUILD = BUILDER + "AutoIncreaseBuild";
         const string DEFAULT_BUILDS_PATH = "Builds";
         public const string BUILD_64 = "_x86_64";
         public const string BUILD_UNIVERSAL = "Universal";
@@ -49,6 +50,10 @@ namespace Autobuilder {
         public static bool SwitchToCurrent {
             get { return EditorProjectPrefs.GetBool(SWITCH_TO_CURRENT, true); }
             set { EditorProjectPrefs.SetBool(SWITCH_TO_CURRENT, value); }
+        }
+        public static bool AutoIncreaseBuild {
+            get { return EditorProjectPrefs.GetBool(AUTO_INCREASE_BUILD, true); }
+            set { EditorProjectPrefs.SetBool(AUTO_INCREASE_BUILD, value); }
         }
         #endregion
 
@@ -118,9 +123,15 @@ namespace Autobuilder {
             });
         }
 
+        private void OnDisable() {
+            PlayerPrefs.Save();
+        }
+
         private void OnGUI() {
             GUILayout.Space(10);
-            Action<bool> tBuildFunction = null;
+            bool makeBuild = false;
+            IBuildModule buildModule = null;
+            Func<bool, bool> tBuildFunction = null;
             bool tDevelopment = false;
 
             EditorGUI.BeginChangeCheck();
@@ -136,6 +147,7 @@ namespace Autobuilder {
             PlayerSettings.bundleVersion = EditorGUILayout.TextField(
                 "Version", PlayerSettings.bundleVersion);
 
+            AutoIncreaseBuild = GUILayout.Toggle(AutoIncreaseBuild, "Automatically increase build number");
             bool tStartWithCurrent = GUILayout.Toggle(StartWithCurrent, "Start with current platform");
             bool tEndWithCurrent = GUILayout.Toggle(EndWithCurrent, "End with current platform");
             if ( tStartWithCurrent && tEndWithCurrent ) {
@@ -147,7 +159,6 @@ namespace Autobuilder {
             SwitchToCurrent = GUILayout.Toggle(SwitchToCurrent, "Switch to current platform when done");
 
             m_ScrollPos = GUILayout.BeginScrollView(m_ScrollPos);
-            GUILayout.Label("Standalone", EditorStyles.boldLabel);
 
             EditorGUI.BeginChangeCheck();
             for ( int i = 0; i < MODULES.Length; i++ ) {
@@ -175,22 +186,39 @@ namespace Autobuilder {
                         GUILayout.MaxWidth(COLUMN1_HALF));
 
                     if ( GUILayout.Button("Build") ) {
+                        makeBuild = true;
                         tBuildFunction = module.BuildGame;
+                        buildModule = module;
                     }
                     if ( GUILayout.Button("Development build") ) {
+                        makeBuild = true;
                         tBuildFunction = module.BuildGame;
                         tDevelopment = true;
+                        buildModule = module;
                     }
                     GUILayout.EndHorizontal();
 
-                    EditorGUI.indentLevel++;
-                    module.OnGUI(out bool build, out bool development);
-                    EditorGUI.indentLevel--;
+                    
+                    bool unfold = PlayerPrefs.GetInt("AutoBuilder.Unfold." + module.Target) > 0;
+                    EditorGUI.BeginChangeCheck();
+                    unfold = EditorGUILayout.Foldout(unfold, "Settings");
+                    if ( EditorGUI.EndChangeCheck() ) {
+                        PlayerPrefs.SetInt("AutoBuilder.Unfold." + module.Target, unfold ? 1 : 0);
+                    }
+                    bool build = false;
+                    bool development = false;
+                    if ( unfold ) {
+                        EditorGUI.indentLevel++;
+                        module.OnGUI(out build, out development);
+                        EditorGUI.indentLevel--;
+                    }
 
                     GUILayout.EndVertical();
                     if ( build ) {
+                        makeBuild = true;
                         tBuildFunction = module.BuildGame;
                         tDevelopment = development;
+                        buildModule = module;
                     }
                 } else {
                     GUILayout.BeginVertical(AreaStyle);
@@ -222,30 +250,52 @@ namespace Autobuilder {
                 GetWindow<BuildPlayerWindow>();
             }
             if ( GUILayout.Button("Build ALL") ) {
+                makeBuild = true;
                 tBuildFunction = BuildGameAll;
+                buildModule = null;
                 tDevelopment = false;
             }
             if ( GUILayout.Button("Build ALL development") ) {
+                makeBuild = true;
                 tBuildFunction = BuildGameAll;
+                buildModule = null;
                 tDevelopment = true;
             }
             GUILayout.EndHorizontal();
 
-            tBuildFunction?.Invoke(tDevelopment);
+            if ( makeBuild ) {
+                if ( !tDevelopment ) {
+                    if ( buildModule != null && AutoIncreaseBuild ) {
+                        buildModule.BuildNumber++;
+                    }
+                }
+                if (
+                    !tBuildFunction(tDevelopment) &&
+                    !tDevelopment &&
+                    AutoIncreaseBuild &&
+                    buildModule != null &&
+                    true
+                ) {
+                    buildModule.BuildNumber--;
+                }
+            }
         }
 
-        public static void BuildGameAll(bool aDevelopment) {
-            List<Action<bool>> tBuildOrder = new List<Action<bool>>();
+        public static bool BuildGameAll(bool aDevelopment) {
+            List<IBuildModule> tBuildOrder = new List<IBuildModule>();
             BuildTarget tCurrent = EditorUserBuildSettings.activeBuildTarget;
             BuildTargetGroup tCurrentGroup =
                 EditorUserBuildSettings.selectedBuildTargetGroup;
             for ( int i = 0; i < MODULES.Length; i++ ) {
                 var module = MODULES[i];
                 if ( module.Enabled ) {
+                    if ( !aDevelopment ) {
+                        module.BuildNumber++;
+                    }
                     if ( StartWithCurrent && module.IsTarget(tCurrent) ) {
-                        tBuildOrder.Insert(0, module.BuildGame);
+                        tBuildOrder.Insert(0, module);
                     } else {
-                        tBuildOrder.Add(module.BuildGame);
+                        tBuildOrder.Add(module);
                     }
                 }
             }
@@ -255,20 +305,30 @@ namespace Autobuilder {
                     var module = MODULES[i];
                     if ( module.Enabled ) {
                         if ( module.IsTarget(tCurrent) ) {
-                            tBuildOrder.Remove(module.BuildGame);
-                            tBuildOrder.Add(module.BuildGame);
+                            tBuildOrder.Remove(module);
+                            tBuildOrder.Add(module);
                         }
                     }
                 }
             }
 
-            foreach ( Action<bool> tBuild in tBuildOrder )
-                tBuild(aDevelopment);
+            bool result = true;
+            foreach ( var module in tBuildOrder ) {
+                if ( !module.BuildGame(aDevelopment) ) {
+                    result = false;
+                    if ( aDevelopment ) {
+                        module.BuildNumber--;
+                    }
+                }
+            }
 
             if ( SwitchToCurrent ) {
                 EditorUserBuildSettings.SwitchActiveBuildTargetAsync(tCurrentGroup, tCurrent);
             }
+
+            return result;
         }
+
 #if UNITY_2018_1_OR_NEWER
         public static BuildReport BuildGame(BuildTarget aTarget, string aPath, bool aDevelopment = false)
 #else

@@ -746,7 +746,7 @@ namespace Autobuilder.SimpleJSON
     }
     // End of JSONNode
 
-    public class JSONArray : JSONNode, IEnumerable
+    public class JSONArray : JSONNode, IEnumerable, IList<JSONNode>
     {
         private List<JSONNode> m_List = new List<JSONNode>();
         public bool inline = false;
@@ -856,6 +856,58 @@ namespace Autobuilder.SimpleJSON
             if (aMode == JSONTextMode.Indent)
                 aSB.AppendLine().Append(' ', aIndent);
             aSB.Append(']');
+        }
+
+        public bool IsReadOnly { get { return false; } }
+
+        public int IndexOf(JSONNode item) {
+            for ( int i = 0; i < m_List.Count; i++ ) {
+                if ( m_List[i] == item ) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        public void Insert(int index, JSONNode item) {
+            if ( item == null ) {
+                item = new JSONObject();
+            }
+            m_List.Insert(index, item);
+        }
+
+        public void RemoveAt(int index) {
+            Remove(index);
+        }
+
+        public void Clear() {
+            m_List.Clear();
+        }
+
+        public bool Contains(JSONNode item) {
+            return m_List.Contains(item);
+        }
+
+        public void CopyTo(JSONNode[] array, int arrayIndex) {
+            int length = UnityEngine.Mathf.Min(array.Length - arrayIndex, Count);
+            for ( int i = 0; i < length; i++ ) {
+                array[i + arrayIndex] = this[i];
+            }
+        }
+
+        bool ICollection<JSONNode>.Remove(JSONNode item) {
+            int index = IndexOf(item);
+            if ( index >= 0 ) {
+                Remove(index);
+                return true;
+            }
+            return false;
+        }
+
+        IEnumerator<JSONNode> IEnumerable<JSONNode>.GetEnumerator() {
+            foreach ( var item in m_List ) {
+                yield return item;
+            }
         }
     }
     // End of JSONArray
