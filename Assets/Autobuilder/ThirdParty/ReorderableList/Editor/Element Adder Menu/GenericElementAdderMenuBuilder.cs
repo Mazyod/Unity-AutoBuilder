@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace RhoTools.ReorderableList {
+namespace Autobuilder.ReorderableList {
 
 	internal sealed class GenericElementAdderMenuBuilder<TContext> : IElementAdderMenuBuilder<TContext> {
 

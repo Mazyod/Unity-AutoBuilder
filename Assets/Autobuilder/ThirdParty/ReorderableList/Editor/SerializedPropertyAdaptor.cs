@@ -1,12 +1,12 @@
 // Copyright (c) RhoTools Limited. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root.
 
-using RhoTools.ReorderableList.Internal;
+using Autobuilder.ReorderableList.Internal;
 using System;
 using UnityEditor;
 using UnityEngine;
 
-namespace RhoTools.ReorderableList {
+namespace Autobuilder.ReorderableList {
 
 	/// <summary>
 	/// Reorderable list adaptor for serialized array property.

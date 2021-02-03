@@ -3,7 +3,7 @@
 
 using System;
 
-namespace RhoTools.ReorderableList {
+namespace Autobuilder.ReorderableList {
 
 	/// <summary>
 	/// Interface for building an <see cref="IElementAdderMenu"/>.

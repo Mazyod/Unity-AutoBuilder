@@ -1,7 +1,7 @@
 // Copyright (c) RhoTools Limited. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root.
 
-namespace RhoTools.ReorderableList {
+namespace Autobuilder.ReorderableList {
 
 	/// <summary>
 	/// Can be implemented along with <see cref="IReorderableListAdaptor"/> when drop

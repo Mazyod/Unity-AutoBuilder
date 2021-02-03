@@ -3,7 +3,7 @@
 
 using UnityEngine;
 
-namespace RhoTools.ReorderableList {
+namespace Autobuilder.ReorderableList {
 
 	/// <summary>
 	/// Interface for a menu command that can be included in an <see cref="IElementAdderMenu"/>

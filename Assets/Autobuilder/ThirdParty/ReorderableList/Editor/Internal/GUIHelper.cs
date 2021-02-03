@@ -6,7 +6,7 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
-namespace RhoTools.ReorderableList.Internal {
+namespace Autobuilder.ReorderableList.Internal {
 
 	/// <summary>
 	/// Utility functions to assist with GUIs.

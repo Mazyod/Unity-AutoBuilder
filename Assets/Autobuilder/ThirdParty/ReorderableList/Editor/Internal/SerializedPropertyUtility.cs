@@ -5,7 +5,7 @@ using System;
 using UnityEditor;
 using UnityEngine;
 
-namespace RhoTools.ReorderableList.Internal {
+namespace Autobuilder.ReorderableList.Internal {
 
 	/// <summary>
 	/// Utility functionality for <see cref="SerializedPropertyAdaptor"/> implementations.

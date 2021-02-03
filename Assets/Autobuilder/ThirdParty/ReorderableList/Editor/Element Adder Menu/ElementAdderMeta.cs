@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace RhoTools.ReorderableList {
+namespace Autobuilder.ReorderableList {
 
 	/// <summary>
 	/// Provides meta information which is useful when creating new implementations of

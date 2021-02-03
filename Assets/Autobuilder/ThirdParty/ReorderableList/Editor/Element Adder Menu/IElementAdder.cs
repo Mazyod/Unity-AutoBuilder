@@ -3,7 +3,7 @@
 
 using System;
 
-namespace RhoTools.ReorderableList {
+namespace Autobuilder.ReorderableList {
 
 	/// <summary>
 	/// Interface for an object which adds elements to a context object of the type

@@ -4,7 +4,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace RhoTools.ReorderableList {
+namespace Autobuilder.ReorderableList {
 
 	internal sealed class GenericElementAdderMenu : IElementAdderMenu {
 
