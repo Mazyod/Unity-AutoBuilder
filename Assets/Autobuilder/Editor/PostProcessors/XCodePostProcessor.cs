@@ -149,36 +149,6 @@ namespace Autobuilder {
 
             AddObjectToDocument(plist, plistData);
 
-            // PlistElementArray array;
-
-            // array = plist.root.CreateArray("UIBackgroundModes");
-            // array.AddString("remote-notification");
-            // // array = plist.root.CreateArray ("CFBundleURLTypes");
-            // // var urlDict = array.AddDict ();
-            // // var urlInnerArray = urlDict.CreateArray ("CFBundleURLSchemes");
-            // // urlInnerArray.AddString ("towergame");
-            // // urlInnerArray.AddString ("fb1562272660732867");
-
-            // // AdColony requirement
-            // plist.root.SetString("NSPhotoLibraryUsageDescription", "Taking pictures");
-            // plist.root.SetString("NSCameraUsageDescription", "Taking pictures");
-            // plist.root.SetString("NSPhotoLibraryAddUsageDescription", "Taking pictures");
-
-            // plist.root.SetString("NSLocationAlwaysUsageDescription ", "Not really used");
-            // plist.root.SetString("NSLocationWhenInUseUsageDescription", "Not really used");
-
-            // plist.root.SetBoolean("ITSAppUsesNonExemptEncryption", false);
-
-            // plist.root.values.Remove("UIApplicationExitsOnSuspend");
-            // plist.root.SetString("ITSAppUsesNonExemptEncryption", "NO");
-
-            // var NSAppTransportSecurity = plist.root.CreateDict("NSAppTransportSecurity");
-            // NSAppTransportSecurity.SetBoolean("NSAllowsArbitraryLoads", true);
-            // var NSExceptionDomains = NSAppTransportSecurity.CreateDict("NSExceptionDomains");
-            // var url1 = NSExceptionDomains.CreateDict("dinosaursarepeopletoo.com");
-            // url1.SetBoolean("NSExceptionAllowsInsecureHTTPLoads", true);
-            // url1.SetBoolean("NSIncludesSubdomains", true);
-
             // Apply editing settings to Info.plist
             plist.WriteToFile(plistPath);
         }
