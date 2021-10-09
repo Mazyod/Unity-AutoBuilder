@@ -3,50 +3,29 @@ using UnityEditor;
 using UnityEditor.Build.Reporting;
 
 namespace Autobuilder {
-    public class OSXModule : IBuildModule {
+    public class OSXModule : BuildModule {
         const string BUILD_OSX_32 = Builder.BUILDER + "BuildOSX32";
         const string BUILD_OSX_64 = Builder.BUILDER + "BuildOSX64";
         const string BUILD_OSX_UNIVERSAL = Builder.BUILDER + "BuildOSXUniversal";
         const string BUILD_DIR_OSX = "/OSX";
 
-        public string Name { get { return "OSX"; } }
-        public BuildTargetGroup TargetGroup { get { return BuildTargetGroup.Standalone; } }
-        public BuildTarget Target { get { return BuildTarget.StandaloneOSX; } }
+        public override BuildTargetGroup TargetGroup { get { return BuildTargetGroup.Standalone; } }
+        public override BuildTarget Target { get { return BuildTarget.StandaloneOSX; } }
 
-        public static bool BuildOSX32 {
-            get { return EditorProjectPrefs.GetBool(BUILD_OSX_32, true); }
-            set { EditorProjectPrefs.SetBool(BUILD_OSX_32, value); }
+        public bool BuildOSX32 {
+            get { return GetBool(BUILD_OSX_32, true); }
+            set { SetBool(BUILD_OSX_32, value); }
         }
-        public static bool BuildOSX64 {
-            get { return EditorProjectPrefs.GetBool(BUILD_OSX_64, false); }
-            set { EditorProjectPrefs.SetBool(BUILD_OSX_64, value); }
+        public bool BuildOSX64 {
+            get { return GetBool(BUILD_OSX_64, true); }
+            set { SetBool(BUILD_OSX_64, value); }
         }
-        public static bool BuildOSXUniversal {
-            get { return EditorProjectPrefs.GetBool(BUILD_OSX_UNIVERSAL, false); }
-            set { EditorProjectPrefs.SetBool(BUILD_OSX_UNIVERSAL, value); }
-        }
-        public bool Enabled {
-            get { return BuildOSX32 || BuildOSX64 || BuildOSXUniversal; }
-            set {
-                BuildOSX32 = true;
-                BuildOSX64 = true;
-                BuildOSXUniversal = true;
-            }
+        public bool BuildOSXUniversal {
+            get { return GetBool(BUILD_OSX_UNIVERSAL, true); }
+            set { SetBool(BUILD_OSX_UNIVERSAL, value); }
         }
 
-        public int BuildNumber {
-            get {
-                if ( int.TryParse(PlayerSettings.macOS.buildNumber, out int tVersion) ) {
-                    return tVersion;
-                }
-                return 0;
-            }
-            set {
-                PlayerSettings.macOS.buildNumber = value.ToString();
-            }
-        }
-
-        public bool IsTarget(BuildTarget aTarget) {
+        public override bool IsTarget(BuildTarget aTarget) {
 #if UNITY_2017_3_OR_NEWER
             return aTarget == BuildTarget.StandaloneOSX;
 #else
@@ -56,18 +35,18 @@ namespace Autobuilder {
 #endif
         }
 
-        public bool BuildGame(bool aDevelopment = false) {
-            // Add build number
-            if ( !Enabled ) return false;
+        public override bool BuildGame(bool development = false) {
+            if (!base.BuildGame(development)) return false;
 
+            PlayerSettings.macOS.buildNumber = BuildNumber.ToString();
 #if UNITY_2017_3_OR_NEWER
 #   if UNITY_2018_1_OR_NEWER
-            BuildReport tReport = Builder.BuildGame(BuildTarget.StandaloneOSX,
-                GetBuildPath(false, false, aDevelopment), aDevelopment);
+            BuildReport tReport = Builder.BuildGame(BuildTargetGroup.Standalone, BuildTarget.StandaloneOSX,
+                GetBuildPath(false, false, development), GetScenesList(), development);
 
             if ( tReport.summary.result != BuildResult.Succeeded )
 #   else
-            string tReport = BuildGame(BuildTarget.StandaloneOSX,
+            string tReport = Builder.BuildGame(BuildTargetGroup.Standalone, BuildTarget.StandaloneOSX,
                 GetBuildPath(false, false, aDevelopment), aDevelopment);
 
             if ( !string.IsNullOrEmpty(tReport) )
@@ -77,15 +56,15 @@ namespace Autobuilder {
             string tError = "";
             
             if (BuildOSX32) {
-                tError += BuildGame(BuildTarget.StandaloneOSXIntel,
+                tError += Builder.BuildGame(BuildTargetGroup.Standalone, BuildTarget.StandaloneOSXIntel,
                     GetBuildPath(false, false, aDevelopment), aDevelopment);
             }
             if (BuildOSX64) {
-                tError += BuildGame(BuildTarget.StandaloneOSXIntel64,
+                tError += Builder.BuildGame(BuildTargetGroup.Standalone, BuildTarget.StandaloneOSXIntel64,
                     GetBuildPath(true, false, aDevelopment), aDevelopment);
             }
             if (BuildOSXUniversal) {
-                tError += BuildGame(BuildTarget.StandaloneOSXUniversal,
+                tError += Builder.BuildGame(BuildTargetGroup.Standalone, BuildTarget.StandaloneOSXUniversal,
                     GetBuildPath(false, true, aDevelopment), aDevelopment);
             }
             if (!string.IsNullOrEmpty(tError)) {
@@ -96,8 +75,7 @@ namespace Autobuilder {
         }
 
         public string GetBuildPath(bool x64bits, bool aUniversal, bool aDevelopment) {
-            string tPath = Builder.DataPath + "/" + Builder.BuildPath
-                + BUILD_DIR_OSX;
+            string tPath = BaseBuildPath;
 
             if ( x64bits ) {
                 tPath += Builder.BUILD_64;
@@ -121,9 +99,9 @@ namespace Autobuilder {
             return tPath;
         }
 
-        public void OnGUI(out bool aBuild, out bool aDevelopment) {
-            aBuild = false;
-            aDevelopment = false;
+        public override void OptionsGUI(out bool build, out bool development) {
+            build = false;
+            development = false;
 
 #if !UNITY_2017_3_OR_NEWER
             BuildOSX32 = EditorGUILayout.Toggle("Build 32 bit version", BuildOSX32);

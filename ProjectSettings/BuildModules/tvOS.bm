@@ -1,0 +1,12 @@
+{
+  "DefineSymbols": [
+    ""
+  ],
+  "ModuleTarget": "tvOS.tvOS",
+  "XCodeData": {
+    "Capabilities": [],
+    "Plist": {},
+    "Files": []
+  },
+  "SortingIndex": 6
+}

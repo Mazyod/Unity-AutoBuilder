@@ -2,11 +2,11 @@ using System.IO;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
-using Autobuilder.SimpleJSON;
+using Newtonsoft.Json.Linq;
 using Autobuilder.ReorderableList;
 
 namespace Autobuilder {
-    public class XCodeModule : IBuildModule {
+    public abstract class XCodeModule : BuildModule {
         const string BUILD_IOS = Builder.BUILDER + "BuildIOS";
         const string BUILD_DIR_IOS = "/iOS";
         const string DATA_PATH = "ProjectSettings/iOSBuildData.json";
@@ -27,94 +27,89 @@ namespace Autobuilder {
             AssociatedDomains,
         }
 
-        public virtual string Name { get { return "iOS"; } }
-        public virtual BuildTargetGroup TargetGroup { get { return BuildTargetGroup.iOS; } }
-        public virtual BuildTarget Target { get { return BuildTarget.iOS; } }
-
-        public virtual bool Enabled { get; set; }
-
-        public virtual int BuildNumber { get; set; }
-
-        protected virtual string DataPath { get; }
-
-        JSONNode m_JsonData;
-        protected JSONNode JsonData {
+        JObject jsonData;
+        protected JObject JsonData {
             get {
-                if ( m_JsonData == null ) {
-                    string path = DataPath;
-                    if ( File.Exists(path) ) {
-                        m_JsonData = JSON.Parse(File.ReadAllText(path));
+                if (jsonData == null) {
+                    var node = Data["XCodeData"];
+                    if (node == null || !(node is JObject)) {
+                        jsonData = new JObject();
+                        Data["XCodeData"] = jsonData;
                     } else {
-                        m_JsonData = new JSONObject();
+                        jsonData = node as JObject;
                     }
                 }
-                return m_JsonData;
+                return jsonData;
             }
         }
 
-        public JSONArray Capabilities {
+        public JArray Capabilities {
             get {
                 var node = JsonData[CAPABILITIES];
-                if ( node == null || !node.IsArray ) {
-                    node = new JSONArray();
+                if (node == null || !(node is JArray)) {
+                    node = new JArray();
                     JsonData[CAPABILITIES] = node;
                 }
 
-                return node.AsArray;
+                return node as JArray;
             }
         }
         CapabilitiesAdaptor m_CapabilitiesAdaptor;
 
-        public JSONObject Plist {
+        public JObject Plist {
             get {
                 var node = JsonData[PLIST];
-                if ( node == null || !node.IsObject ) {
-                    node = new JSONObject();
+                if (node == null || !(node is JObject)) {
+                    node = new JObject();
                     JsonData[PLIST] = node;
                 }
 
-                return node.AsObject;
+                return node as JObject;
             }
         }
         JSONNodeAdaptor m_PlistAdaptor;
 
-        public JSONArray Files {
+        public JArray Files {
             get {
                 var node = JsonData[FILES];
-                if (node == null || !node.IsArray) {
-                    node = new JSONArray();
+                if (node == null || !(node is JArray)) {
+                    node = new JArray();
                     JsonData[FILES] = node;
                 }
-                return node.AsArray;
+                return node as JArray;
             }
         }
+
+        public override abstract BuildTarget Target { get; }
+
+        public override abstract BuildTargetGroup TargetGroup { get; }
+
         JSONFilesAdaptor filesAdaptor;
 
-        public XCodeModule() {
+        public override void Load(JObject root) {
+            jsonData = null;
+            base.Load(root);
             m_CapabilitiesAdaptor = new CapabilitiesAdaptor(Capabilities);
             m_PlistAdaptor = new JSONNodeAdaptor(Plist);
             filesAdaptor = new JSONFilesAdaptor(Files);
         }
 
-        void Save() {
-            File.WriteAllText(DataPath, JsonData.ToString());
-        }
-
-        public bool IsTarget(BuildTarget aTarget) {
+        public override bool IsTarget(BuildTarget aTarget) {
             return aTarget == Target;
         }
 
-        public virtual bool BuildGame(bool aDevelopment = false) {
-            if ( !aDevelopment ) {
-                // } else {
-                //     PlayerSettings.iOS.sdkVersion = iOSSdkVersion.SimulatorSDK;
+        public override bool BuildGame(bool development = false) {
+            if (!base.BuildGame(development)) return false;
+
+            if (development) {
+                // PlayerSettings.iOS.sdkVersion = iOSSdkVersion.SimulatorSDK;
             }
 
-            string path = GetBuildPath(aDevelopment);
+            string path = GetBuildPath(development);
             // Build Game
 #if UNITY_2018_1_OR_NEWER
-            BuildReport tReport = Builder.BuildGame(Target,
-                path, aDevelopment);
+            BuildReport tReport = Builder.BuildGame(TargetGroup, Target,
+                path, GetScenesList(), development);
             return tReport.summary.result != BuildResult.Succeeded;
 #else
             string tReport = BuildGame(Target,
@@ -127,15 +122,14 @@ namespace Autobuilder {
             return "";
         }
 
-        public void OnGUI(out bool aBuild, out bool aDevelopment) {
-            aBuild = false;
-            aDevelopment = false;
+        public override void OptionsGUI(out bool build, out bool development) {
+            build = false;
+            development = false;
 
-            Enabled = EditorGUILayout.Toggle("Build " + Target + " version", Enabled);
             EditorGUI.BeginChangeCheck();
             string tIOSIdentifier = EditorGUILayout.TextField("Bundle identifier",
                 PlayerSettings.GetApplicationIdentifier(BuildTargetGroup.iOS));
-            if ( EditorGUI.EndChangeCheck() ) {
+            if (EditorGUI.EndChangeCheck()) {
                 PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.iOS,
                     tIOSIdentifier);
             }
@@ -149,7 +143,7 @@ namespace Autobuilder {
             ReorderableListGUI.ListField(m_PlistAdaptor);
             ReorderableListGUI.Title("Files/Directories");
             ReorderableListGUI.ListField(filesAdaptor);
-            if ( EditorGUI.EndChangeCheck() ) {
+            if (EditorGUI.EndChangeCheck()) {
                 Save();
             }
 
@@ -164,16 +158,16 @@ namespace Autobuilder {
         }
 
         class CapabilitiesAdaptor : IReorderableListAdaptor {
-            JSONArray m_Capabilities;
+            JArray m_Capabilities;
 
-            public CapabilitiesAdaptor(JSONArray aCapabilities) {
+            public CapabilitiesAdaptor(JArray aCapabilities) {
                 m_Capabilities = aCapabilities;
             }
 
             public int Count { get { return m_Capabilities.Count; } }
 
             public void Add() {
-                var newNode = new JSONObject();
+                var newNode = new JObject();
                 SetType(CapabilityType.iCloud, newNode);
                 m_Capabilities.Add(newNode);
             }
@@ -190,29 +184,29 @@ namespace Autobuilder {
             }
 
             public void Clear() {
-                m_Capabilities = new JSONArray();
+                m_Capabilities = new JArray();
             }
 
-            void SetType(CapabilityType type, JSONNode node) {
+            void SetType(CapabilityType type, JToken node) {
                 node[CAPABILITY_TYPE] = (int) type;
-                switch ( type ) {
+                switch (type) {
                     case CapabilityType.iCloud:
-                        if ( node[ENABLE_KEYVALUE_STORAGE] == null ) {
+                        if (node[ENABLE_KEYVALUE_STORAGE] == null) {
                             node[ENABLE_KEYVALUE_STORAGE] = false;
                         }
-                        if ( node[ENABLE_ICLOUD_DOCUMENT] == null ) {
+                        if (node[ENABLE_ICLOUD_DOCUMENT] == null) {
                             node[ENABLE_ICLOUD_DOCUMENT] = false;
                         }
-                        if ( node[ENABLE_CLOUDKIT] == null ) {
+                        if (node[ENABLE_CLOUDKIT] == null) {
                             node[ENABLE_CLOUDKIT] = true;
                         }
-                        if ( node[ICLOUD_CUSTOM_CONTAINERS] == null ) {
-                            node[ICLOUD_CUSTOM_CONTAINERS] = new JSONArray();
+                        if (node[ICLOUD_CUSTOM_CONTAINERS] == null) {
+                            node[ICLOUD_CUSTOM_CONTAINERS] = new JArray();
                         }
                         break;
                     case CapabilityType.AssociatedDomains:
-                        if ( node[ASSOCIATED_DOMAINS] == null ) {
-                            node[ASSOCIATED_DOMAINS] = new JSONArray();
+                        if (node[ASSOCIATED_DOMAINS] == null) {
+                            node[ASSOCIATED_DOMAINS] = new JArray();
                         }
                         break;
                 }
@@ -223,36 +217,36 @@ namespace Autobuilder {
                 position.height = EditorGUIUtility.singleLineHeight;
                 EditorGUI.BeginChangeCheck();
                 var type = (CapabilityType) EditorGUI.EnumPopup(position, "Type",
-                    (CapabilityType) node[CAPABILITY_TYPE].AsInt);
-                if ( EditorGUI.EndChangeCheck() ) {
+                    (CapabilityType) (int) node[CAPABILITY_TYPE]);
+                if (EditorGUI.EndChangeCheck()) {
                     SetType(type, node);
                 }
 
                 node[CAPABILITY_TYPE] = (int) type;
 
-                switch ( type ) {
+                switch (type) {
                     case CapabilityType.iCloud:
                         position.y += position.height;
                         node[ENABLE_KEYVALUE_STORAGE] = EditorGUI.ToggleLeft(position,
-                            "Key-value storage", node[ENABLE_KEYVALUE_STORAGE].AsBool);
+                            "Key-value storage", (bool) node[ENABLE_KEYVALUE_STORAGE]);
 
                         position.y += position.height;
                         node[ENABLE_ICLOUD_DOCUMENT] = EditorGUI.ToggleLeft(position,
-                            "iCloud Documents", node[ENABLE_ICLOUD_DOCUMENT].AsBool);
+                            "iCloud Documents", (bool) node[ENABLE_ICLOUD_DOCUMENT]);
 
                         position.y += position.height;
                         node[ENABLE_CLOUDKIT] = EditorGUI.ToggleLeft(position, "CloudKit",
-                            node[ENABLE_CLOUDKIT].AsBool);
+                            (bool) node[ENABLE_CLOUDKIT]);
 
                         position.y += position.height;
                         position.height = EditorGUIUtility.singleLineHeight;
                         ReorderableListGUI.Title(position, "Containers");
 
                         position.y += position.height - 1;
-                        var customContainers = node[ICLOUD_CUSTOM_CONTAINERS].AsArray;
+                        var customContainers = node[ICLOUD_CUSTOM_CONTAINERS] as JArray;
                         position.height = ReorderableListGUI.CalculateListFieldHeight(
                             customContainers.Count, EditorGUIUtility.singleLineHeight);
-                        ReorderableListGUI.ListFieldAbsolute<JSONNode>(position,
+                        ReorderableListGUI.ListFieldAbsolute<JToken>(position,
                             customContainers, DrawContainer, null,
                             EditorGUIUtility.singleLineHeight);
                         break;
@@ -261,21 +255,21 @@ namespace Autobuilder {
                         ReorderableListGUI.Title(position, "Domains");
 
                         position.y += position.height - 1;
-                        var associatedDomains = node[ASSOCIATED_DOMAINS].AsArray;
+                        var associatedDomains = node[ASSOCIATED_DOMAINS] as JArray;
                         position.height = ReorderableListGUI.CalculateListFieldHeight(
                             associatedDomains.Count, EditorGUIUtility.singleLineHeight);
-                        ReorderableListGUI.ListFieldAbsolute<JSONNode>(position,
+                        ReorderableListGUI.ListFieldAbsolute<JToken>(position,
                             associatedDomains, DrawContainer, null,
                             EditorGUIUtility.singleLineHeight);
                         break;
                 }
             }
 
-            JSONNode DrawContainer(Rect position, JSONNode node) {
-                if ( !node.IsString ) {
-                    node = new JSONString("iCloud.$(CFBundleIdentifier)");
+            JToken DrawContainer(Rect position, JToken node) {
+                if (node.Type == JTokenType.String) {
+                    node = new JValue("iCloud.$(CFBundleIdentifier)");
                 }
-                node.Value = EditorGUI.DelayedTextField(position, node.Value);
+                node = EditorGUI.DelayedTextField(position, (string) node);
                 return node;
             }
 
@@ -284,7 +278,7 @@ namespace Autobuilder {
 
             public void Duplicate(int index) {
                 var node = m_Capabilities[index];
-                m_Capabilities.Add(JSON.Parse(node.ToString()));
+                m_Capabilities.Add(node);
             }
 
             public void EndGUI() {
@@ -294,18 +288,18 @@ namespace Autobuilder {
                 float height = EditorGUIUtility.singleLineHeight;
 
                 var node = m_Capabilities[index];
-                var type = (CapabilityType) node[CAPABILITY_TYPE].AsInt;
+                var type = (CapabilityType) (int) node[CAPABILITY_TYPE];
 
-                switch ( type ) {
+                switch (type) {
                     case CapabilityType.iCloud:
                         height += EditorGUIUtility.singleLineHeight * 4;
-                        var customContainers = node[ICLOUD_CUSTOM_CONTAINERS].AsArray;
+                        var customContainers = node[ICLOUD_CUSTOM_CONTAINERS] as JArray;
                         height += ReorderableListGUI.CalculateListFieldHeight(
                             customContainers.Count, EditorGUIUtility.singleLineHeight);
                         break;
                     case CapabilityType.AssociatedDomains:
                         height += EditorGUIUtility.singleLineHeight;
-                        var associatedDomains = node[ASSOCIATED_DOMAINS].AsArray;
+                        var associatedDomains = node[ASSOCIATED_DOMAINS] as JArray;
                         height += ReorderableListGUI.CalculateListFieldHeight(
                             associatedDomains.Count, EditorGUIUtility.singleLineHeight);
                         break;
@@ -321,7 +315,7 @@ namespace Autobuilder {
             }
 
             public void Remove(int index) {
-                m_Capabilities.Remove(index);
+                m_Capabilities.RemoveAt(index);
             }
         }
     }

@@ -1,0 +1,9 @@
+{
+  "DefineSymbols": [
+    {}
+  ],
+  "AutobuilderBuildWin32": false,
+  "AutobuilderBuildWin64": true,
+  "ModuleTarget": "Standalone.StandaloneWindows64",
+  "SortingIndex": 0
+}

@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
-using Autobuilder.SimpleJSON;
+using Newtonsoft.Json.Linq;
 using Autobuilder.ReorderableList;
 using UnityEditor;
 using UnityEngine;
 
 namespace Autobuilder {
     public class JSONFilesAdaptor : IReorderableListAdaptor {
-        JSONArray array;
+        JArray array;
 
-        public JSONFilesAdaptor(JSONArray array) {
+        public JSONFilesAdaptor(JArray array) {
             this.array = array;
         }
 
@@ -47,7 +47,7 @@ namespace Autobuilder {
                 value = EditorUtility.OpenFilePanel(title, folder, extension);
                 onChange?.Invoke(value);
             }
-            
+
             if (area.Contains(Event.current.mousePosition)) {
                 if (Event.current.type == EventType.DragUpdated) {
                     DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
@@ -65,8 +65,7 @@ namespace Autobuilder {
         }
 
         public void DrawItem(Rect position, int index) {
-            array[index].Value = FileSelect(position, array[index], "Select file", Application.dataPath,
-                "");
+            array[index] = FileSelect(position, (string) array[index], "Select file", Application.dataPath, "");
         }
 
         public void DrawItemBackground(Rect position, int index) {
@@ -99,32 +98,42 @@ namespace Autobuilder {
     }
 
     public class JSONNodeAdaptor : IReorderableListAdaptor {
-        JSONNode m_Node;
+        JToken m_Node;
         List<string> m_Keys;
         Dictionary<string, JSONNodeAdaptor> m_NodeAdaptors;
+        System.Random random;
 
-        public JSONNodeAdaptor(JSONNode aNode) {
+        public JSONNodeAdaptor(JToken aNode) {
             m_Node = aNode;
             m_Keys = new List<string>();
             m_NodeAdaptors = new Dictionary<string, JSONNodeAdaptor>();
+            random = new System.Random();
+
             UpdateKeys();
         }
 
         void UpdateKeys() {
-            if ( Count == m_Keys.Count ) return;
+            if (Count == m_Keys.Count) return;
             m_Keys.Clear();
-            if ( m_Node.IsObject ) {
-                foreach ( var key in m_Node.AsObject.Keys ) {
-                    m_Keys.Add(key);
+            if (m_Node is JObject) {
+                foreach (var key in (m_Node as JObject).Properties()) {
+                    m_Keys.Add(key.Name);
                 }
             }
         }
 
-        public int Count { get { return m_Node.Count; } }
+        public int Count {
+            get {
+                if (m_Node is JObject) return (m_Node as JObject).Count;
+                if (m_Node is JArray) return (m_Node as JArray).Count;
+                return 0;
+            }
+        }
 
         public void Add() {
-            var node = new JSONObject();
-            m_Node.Add(node);
+            var node = new JObject();
+            if (m_Node is JObject) (m_Node as JObject).Add(random.Next().ToString(), node);
+            if (m_Node is JArray) (m_Node as JArray).Add(node);
         }
 
         public void BeginGUI() {
@@ -144,13 +153,14 @@ namespace Autobuilder {
         }
 
         public void DrawItem(Rect position, int index) {
-            JSONNode node;
+            JToken node;
             float total = 1;
             const float typeWidth = 70f;
             float width = position.width - typeWidth;
             string key = index.ToString();
 
-            if ( m_Node.IsObject ) {
+            if (m_Node is JObject) {
+                var objNode = m_Node as JObject;
                 key = m_Keys[index];
                 node = m_Node[key];
 
@@ -159,62 +169,83 @@ namespace Autobuilder {
                 position.height = EditorGUIUtility.singleLineHeight;
                 EditorGUI.BeginChangeCheck();
                 var newkey = EditorGUI.DelayedTextField(position, key);
-                if ( EditorGUI.EndChangeCheck() ) {
-                    m_Node.Remove(key);
+                if (EditorGUI.EndChangeCheck()) {
+                    objNode.Remove(key);
                     m_Keys.RemoveAt(index);
-                    m_Node.Add(newkey, node);
+                    objNode.Add(newkey, node);
                     m_Keys.Add(newkey);
                 }
                 position.x += position.width;
             } else {
-                node = m_Node.AsArray[index];
+                node = (m_Node as JArray)[index];
             }
 
             position.width = typeWidth;
             EditorGUI.BeginChangeCheck();
-            JSONNodeType type = node.Tag;
-            var newType = (JSONNodeType) EditorGUI.EnumPopup(position, type);
-            if ( EditorGUI.EndChangeCheck() && newType != type ) {
-                JSONNode newNode = new JSONNull();
-                switch ( newType ) {
-                    case JSONNodeType.String:
-                        newNode = new JSONString(node.Value);
+            JTokenType type = node.Type;
+            var newType = (JTokenType) EditorGUI.EnumPopup(position, type);
+            if (EditorGUI.EndChangeCheck() && newType != type) {
+                JToken newNode = null;
+                switch (newType) {
+                    case JTokenType.String:
+                        try {
+                            newNode = new JValue((string) node);
+                        } catch (ArgumentException) {
+                            newNode = new JValue("");
+                        }
                         break;
-                    case JSONNodeType.Boolean:
+                    case JTokenType.Boolean:
                         bool newVal = false;
-                        if ( node.Value.ToUpper() == "NO" ) {
+                        if (((string) node).ToUpper() == "NO") {
                             newVal = false;
-                        } else if ( node.Value.ToUpper() == "YES" ) {
+                        } else if (((string) node).ToUpper() == "YES") {
                             newVal = true;
                         } else {
-                            bool.TryParse(node.Value, out newVal);
+
+                            bool.TryParse((string) node, out newVal);
                         }
-                        newNode = new JSONBool(newVal);
+                        newNode = new JValue(newVal);
                         break;
-                    case JSONNodeType.Number:
-                        double newDouble = 0;
-                        double.TryParse(node.Value, out newDouble);
-                        newNode = new JSONNumber(newDouble);
+                    case JTokenType.Float:
+                        float newFloat;
+                        try {
+                            float.TryParse((string) node, out newFloat);
+                        } catch (ArgumentException) {
+                            newFloat = 0;
+                        }
+                        newNode = new JValue(newFloat);
                         break;
-                    case JSONNodeType.Array:
-                        newNode = new JSONArray();
-                        if ( node.IsObject ) {
-                            foreach ( JSONNode item in node.AsObject.Children ) {
-                                newNode.AsArray.Add(item);
+                    case JTokenType.Integer:
+                        int newInt;
+                        try {
+                            int.TryParse((string) node, out newInt);
+                        } catch (ArgumentException) {
+                            newInt = 0;
+                        }
+                        newNode = new JValue(newInt);
+                        break;
+                    case JTokenType.Array:
+                        newNode = new JArray();
+                        if (node is JObject) {
+                            foreach (JToken item in (node as JObject).Children()) {
+                                (newNode as JArray).Add(item);
                             }
                         }
                         break;
-                    case JSONNodeType.Object:
-                        newNode = new JSONObject();
-                        if ( node.IsArray ) {
-                            foreach ( JSONNode item in node.AsArray ) {
-                                newNode.AsObject.Add(item);
+                    case JTokenType.Object:
+                        newNode = new JObject();
+                        if (node is JArray) {
+                            foreach (JToken item in (node as JArray)) {
+                                (newNode as JObject).Add(item);
                             }
                         }
+                        break;
+                    default:
+                        newNode = node;
                         break;
                 }
-                if ( m_Node.IsArray ) {
-                    m_Node.AsArray[index] = newNode;
+                if (m_Node is JArray) {
+                    (m_Node as JArray)[index] = newNode;
                 } else {
                     m_Node[key] = newNode;
                 }
@@ -224,22 +255,39 @@ namespace Autobuilder {
 
             position.x += position.width;
             position.width = width * total;
-            if ( node.IsBoolean ) {
-                node.AsBool = EditorGUI.Toggle(position, node.AsBool);
-            } else if ( node.IsString ) {
-                node.Value = EditorGUI.DelayedTextField(position, node.Value);
-            } else if ( node.IsNumber ) {
-                node.AsDouble = EditorGUI.DoubleField(position, node.AsDouble);
-            } else if ( node.IsArray || node.IsObject ) {
-                JSONNodeAdaptor adaptor = GetAdaptor(key, node);
-                position.height = ReorderableListGUI.CalculateListFieldHeight(adaptor);
-                ReorderableListGUI.ListFieldAbsolute(position, adaptor);
+            switch (node.Type) {
+                case JTokenType.Boolean:
+                    SetNode(index, new JValue(EditorGUI.Toggle(position, (bool) node)));
+                    break;
+                case JTokenType.Integer:
+                    SetNode(index, new JValue(EditorGUI.IntField(position, (int) node)));
+                    break;
+                case JTokenType.Float:
+                    SetNode(index, new JValue(EditorGUI.FloatField(position, (float) node)));
+                    break;
+                case JTokenType.String:
+                    SetNode(index, new JValue(EditorGUI.TextField(position, (string) node)));
+                    break;
+                default:
+                    JSONNodeAdaptor adaptor = GetAdaptor(key, node);
+                    position.height = ReorderableListGUI.CalculateListFieldHeight(adaptor);
+                    ReorderableListGUI.ListFieldAbsolute(position, adaptor);
+                    break;
             }
         }
 
-        private JSONNodeAdaptor GetAdaptor(string key, JSONNode node) {
+        void SetNode(int index, JValue value) {
+            if (m_Node is JObject) {
+                var key = m_Keys[index];
+                m_Node[key] = value;
+            } else if (m_Node is JArray) {
+                m_Node[index] = value;
+            }
+        }
+
+        private JSONNodeAdaptor GetAdaptor(string key, JToken node) {
             JSONNodeAdaptor adaptor;
-            if ( m_NodeAdaptors.ContainsKey(key) ) {
+            if (m_NodeAdaptors.ContainsKey(key)) {
                 adaptor = m_NodeAdaptors[key];
             } else {
                 adaptor = new JSONNodeAdaptor(node);
@@ -251,7 +299,11 @@ namespace Autobuilder {
         }
 
         public void Duplicate(int index) {
-            m_Node.Add(JSON.Parse(m_Node[index].ToString()));
+            if (m_Node is JObject) {
+                (m_Node as JObject).Add(random.Next().ToString(), m_Node[index]);
+            } else if (m_Node is JArray) {
+                (m_Node as JArray).Add(m_Node[index]);
+            }
         }
 
         public void EndGUI() {
@@ -259,16 +311,16 @@ namespace Autobuilder {
 
         public float GetItemHeight(int index) {
             UpdateKeys();
-            JSONNode node;
+            JToken node;
             string key;
-            if ( m_Node.IsObject ) {
+            if (m_Node is JObject) {
                 key = m_Keys[index];
                 node = m_Node[key];
             } else {
                 key = index.ToString();
-                node = m_Node.AsArray[index];
+                node = (m_Node as JArray)[index];
             }
-            if ( node.IsObject || node.IsArray ) {
+            if (node is JObject || node is JArray) {
                 return ReorderableListGUI.CalculateListFieldHeight(GetAdaptor(key, node));
             }
             return EditorGUIUtility.singleLineHeight;
@@ -282,15 +334,16 @@ namespace Autobuilder {
 
         public void Remove(int index) {
             string key;
-            if ( m_Node.IsObject ) {
+            if (m_Node is JObject) {
                 key = m_Keys[index];
+                (m_Node as JObject).Remove(key);
             } else {
                 key = index.ToString();
+                (m_Node as JArray).RemoveAt(index);
             }
-            if ( m_NodeAdaptors.ContainsKey(key) ) {
+            if (m_NodeAdaptors.ContainsKey(key)) {
                 m_NodeAdaptors.Remove(key);
             }
-            m_Node.Remove(index);
             m_Keys.RemoveAt(index);
         }
     }

@@ -3,48 +3,31 @@ using UnityEditor;
 using UnityEditor.Build.Reporting;
 
 namespace Autobuilder {
-    public class WindowsModule : IBuildModule {
+    public class WindowsModule : BuildModule {
         const string WIN_BUILD_NUMBER = Builder.BUILDER + "WindowsBuildNumber";
         const string BUILD_WIN_32 = Builder.BUILDER + "BuildWin32";
         const string BUILD_WIN_64 = Builder.BUILDER + "BuildWin64";
-        const string BUILD_DIR_WINDOWS = "/Windows";
 
-        public string Name { get { return "Windows"; } }
-        public BuildTargetGroup TargetGroup { get { return BuildTargetGroup.Standalone; } }
-        public BuildTarget Target { get { return BuildTarget.StandaloneWindows64; } }
+        public override BuildTargetGroup TargetGroup { get { return BuildTargetGroup.Standalone; } }
+        public override BuildTarget Target { get { return BuildTarget.StandaloneWindows64; } }
 
-        public static bool BuildWin32 {
-            get { return EditorProjectPrefs.GetBool(BUILD_WIN_32, true); }
-            set { EditorProjectPrefs.SetBool(BUILD_WIN_32, value); }
+        public bool BuildWin32 {
+            get { return GetBool(BUILD_WIN_32, false); }
+            set { SetBool(BUILD_WIN_32, value); }
         }
-        public static bool BuildWin64 {
-            get { return EditorProjectPrefs.GetBool(BUILD_WIN_64, false); }
-            set { EditorProjectPrefs.SetBool(BUILD_WIN_64, value); }
-        }
-        public bool Enabled {
-            get { return BuildWin32 || BuildWin64; }
-            set {
-                BuildWin32 = true;
-                BuildWin64 = true;
-            }
+        public bool BuildWin64 {
+            get { return GetBool(BUILD_WIN_64, true); }
+            set { SetBool(BUILD_WIN_64, value); }
         }
 
-        public int BuildNumber {
-            get { return EditorProjectPrefs.GetInt(WIN_BUILD_NUMBER, 0); }
-            set {
-                EditorProjectPrefs.SetInt(WIN_BUILD_NUMBER, value);
-                EditorProjectPrefs.Save();
-            }
-        }
-
-        public bool IsTarget(BuildTarget aTarget) {
+        public override bool IsTarget(BuildTarget aTarget) {
             return aTarget == BuildTarget.StandaloneWindows
                 || aTarget == BuildTarget.StandaloneWindows64;
         }
 
-        public bool BuildGame(bool aDevelopment = false) {
-            // Add build number
-            if ( Enabled ) {
+        public override bool BuildGame(bool development = false) {
+            if (!base.BuildGame(development)) return false;
+
 #if UNITY_2018_1_OR_NEWER
                 BuildResult tResult = BuildResult.Succeeded;
                 BuildReport tReport;
@@ -53,8 +36,8 @@ namespace Autobuilder {
                 string tReport;
 #endif
                 if ( BuildWin32 ) {
-                    tReport = Builder.BuildGame(BuildTarget.StandaloneWindows,
-                        GetBuildPath(false, aDevelopment), aDevelopment);
+                    tReport = Builder.BuildGame(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows,
+                        GetBuildPath(false, development), GetScenesList(), development);
 #if UNITY_2018_1_OR_NEWER
                     if ( tReport.summary.result != BuildResult.Succeeded )
                         tResult = BuildResult.Failed;
@@ -64,8 +47,8 @@ namespace Autobuilder {
                 }
 
                 if ( BuildWin64 ) {
-                    tReport = Builder.BuildGame(BuildTarget.StandaloneWindows64,
-                        GetBuildPath(true, aDevelopment), aDevelopment);
+                    tReport = Builder.BuildGame(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows64,
+                        GetBuildPath(true, development), GetScenesList(), development);
 #if UNITY_2018_1_OR_NEWER
                     if ( tReport.summary.result != BuildResult.Succeeded )
                         tResult = BuildResult.Failed;
@@ -75,20 +58,14 @@ namespace Autobuilder {
                 }
 
 #if UNITY_2018_1_OR_NEWER
-                if ( tResult != BuildResult.Succeeded )
+                return tResult == BuildResult.Succeeded;
 #else
-                if ( !string.IsNullOrEmpty(tResult) )
+                return string.IsNullOrEmpty(tResult);
 #endif
-                {
-                    return false;
-                }
-            }
-            return false;
         }
 
         public string GetBuildPath(bool x64bits, bool aDevelopment) {
-            string tPath = Builder.DataPath + "/" + Builder.BuildPath
-                + BUILD_DIR_WINDOWS;
+            string tPath = BaseBuildPath;
 
             if ( x64bits ) {
                 tPath += Builder.BUILD_64;
@@ -110,9 +87,9 @@ namespace Autobuilder {
             return tPath;
         }
 
-        public void OnGUI(out bool aBuild, out bool aDevelopment) {
-            aBuild = false;
-            aDevelopment = false;
+        public override void OptionsGUI(out bool build, out bool development) {
+            build = false;
+            development = false;
             BuildWin32 = EditorGUILayout.Toggle("Build 32 bit version", BuildWin32);
             BuildWin64 = EditorGUILayout.Toggle("Build 64 bit version", BuildWin64);
         }

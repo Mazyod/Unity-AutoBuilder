@@ -1,44 +1,27 @@
-﻿using Autobuilder.SimpleJSON;
+﻿using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
 namespace Autobuilder {
     public static class EditorProjectPrefs {
-        const string OLD_SETTINGS_PATH = "CustomSettings/";
-        const string SETTINGS_PATH = "ProjectSettings/";
+        const string OLD_SETTINGS_PATH = "CustomSettings";
+        const string SETTINGS_PATH = "ProjectSettings";
         const string FILEPATH = "EditorProjectPrefs.json";
-        static string OldFilePath {
-            get {
-                return Application.dataPath.Substring(0, Application.dataPath.Length - "/Assets".Length)
-+ "/" + OLD_SETTINGS_PATH + FILEPATH;
-            }
-        }
-        static string FilePath {
-            get {
-                return Application.dataPath.Substring(0, Application.dataPath.Length - "/Assets".Length)
-+ "/" + SETTINGS_PATH + FILEPATH;
-            }
-        }
+        static string Root => Application.dataPath.Substring(0, Application.dataPath.Length - "/Assets".Length);
+        static string OldFilePath => Path.Combine(Root, OLD_SETTINGS_PATH, FILEPATH);
+        static string FilePath => Path.Combine(Root, SETTINGS_PATH, FILEPATH);
 
-        static JSONObject m_Prefs;
-        static JSONObject Prefs {
+        static JObject m_Prefs;
+        static JObject Prefs {
             get {
                 if (m_Prefs == null) {
                     MoveOldFile();
                     if (File.Exists(FilePath)) {
-                        try {
-                            JSONNode tNode = JSON.Parse(File.ReadAllText(FilePath));
-                            if (tNode.IsObject)
-                                m_Prefs = tNode.AsObject;
-                            else
-                                m_Prefs = new JSONObject();
-                        }
-                        catch {
-                            m_Prefs = new JSONObject();
-                        }
-                    } else
-                        m_Prefs = new JSONObject();
+                        m_Prefs = JObject.Parse(File.ReadAllText(FilePath));
+                    } else {
+                        m_Prefs = new JObject();
+                    }
                 }
                 return m_Prefs;
             }
@@ -56,9 +39,9 @@ namespace Autobuilder {
         /// </summary>
         public static void SetBool(string key, bool value) {
             if (Prefs[key] == null)
-                Prefs[key] = new JSONBool(value);
+                Prefs[key] = new JValue(value);
             else
-                Prefs[key].AsBool = value;
+                Prefs[key] = value;
             Save();
         }
 
@@ -69,7 +52,7 @@ namespace Autobuilder {
             if (Prefs[key] == null)
                 return defaultValue;
             else
-                return Prefs[key].AsBool;
+                return (bool) Prefs[key];
         }
 
         /// <summary>
@@ -85,9 +68,9 @@ namespace Autobuilder {
         /// </summary>
         public static void SetString(string key, string value) {
             if (Prefs[key] == null)
-                Prefs[key] = new JSONString(value);
+                Prefs[key] = new JValue(value);
             else
-                Prefs[key].Value = value;
+                Prefs[key] = value;
         }
 
         /// <summary>
@@ -97,7 +80,7 @@ namespace Autobuilder {
             if (Prefs[key] == null)
                 return defaultValue;
             else
-                return Prefs[key].Value;
+                return (string) Prefs[key];
         }
 
         /// <summary>
@@ -113,9 +96,9 @@ namespace Autobuilder {
         /// </summary>
         public static void SetInt(string key, int value) {
             if (Prefs[key] == null)
-                Prefs[key] = new JSONNumber(value);
+                Prefs[key] = new JValue(value);
             else
-                Prefs[key].AsInt = value;
+                Prefs[key] = value;
         }
 
         /// <summary>
@@ -125,7 +108,7 @@ namespace Autobuilder {
             if (Prefs[key] == null)
                 return defaultValue;
             else
-                return Prefs[key].AsInt;
+                return (int) Prefs[key];
         }
 
         /// <summary>
@@ -141,9 +124,9 @@ namespace Autobuilder {
         /// </summary>
         public static void SetFloat(string key, float value) {
             if (Prefs[key] == null)
-                Prefs[key] = new JSONNumber(value);
+                Prefs[key] = new JValue(value);
             else
-                Prefs[key].AsFloat = value;
+                Prefs[key] = value;
         }
 
         /// <summary>
@@ -153,7 +136,7 @@ namespace Autobuilder {
             if (Prefs[key] == null)
                 return defaultValue;
             else
-                return Prefs[key].AsFloat;
+                return (float) Prefs[key];
         }
 
 
@@ -170,9 +153,9 @@ namespace Autobuilder {
         /// </summary>
         public static void SetDouble(string key, double value) {
             if (Prefs[key] == null)
-                Prefs[key] = new JSONNumber(value);
+                Prefs[key] = new JValue(value);
             else
-                Prefs[key].AsDouble = value;
+                Prefs[key] = value;
         }
 
         /// <summary>
@@ -182,7 +165,7 @@ namespace Autobuilder {
             if (Prefs[key] == null)
                 return defaultValue;
             else
-                return Prefs[key].AsDouble;
+                return (double) Prefs[key];
         }
 
 
@@ -199,9 +182,9 @@ namespace Autobuilder {
         /// Saves a list of integers with the specified key.
         /// </summary>
         public static void SetList(string key, IList<int> list) {
-            JSONArray node = new JSONArray();
+            JArray node = new JArray();
             for (int i = 0; i < list.Count; i++)
-                node[i] = new JSONNumber(list[i]);
+                node[i] = new JValue(list[i]);
             Prefs[key] = node;
         }
 
@@ -209,16 +192,16 @@ namespace Autobuilder {
         /// Retrieves a list of integers with the specified key and saves it in the provided list.
         /// </summary>
         public static void GetList(string key, ref int[] list) {
-            JSONNode node = Prefs[key];
+            var node = Prefs[key];
             if (node != null) {
-                if (node.IsArray) {
-                    JSONArray tArray = node.AsArray;
+                if (node is JArray) {
+                    var tArray = node as JArray;
                     list = new int[tArray.Count];
                     for (int i = 0; i < tArray.Count; i++)
-                        list[i] = tArray[i].AsInt;
-                } else if (node.IsNumber) {
+                        list[i] = (int) tArray[i];
+                } else if (node.Type == JTokenType.Integer) {
                     list = new int[1];
-                    list[1] = node.AsInt;
+                    list[1] = (int) node;
                 }
             } else
                 list = new int[0];
@@ -231,14 +214,14 @@ namespace Autobuilder {
             if (list == null)
                 list = new List<int>();
             list.Clear();
-            JSONNode node = Prefs[key];
+            var node = Prefs[key];
             if (node != null) {
-                if (node.IsArray) {
-                    JSONArray tArray = node.AsArray;
+                if (node is JArray) {
+                    var tArray = node as JArray;
                     for (int i = 0; i < tArray.Count; i++)
-                        list.Add(tArray[i].AsInt);
-                } else if (node.IsNumber) {
-                    list.Add(node.AsInt);
+                        list.Add((int) tArray[i]);
+                } else if (node.Type == JTokenType.Integer) {
+                    list.Add((int) node);
                 }
             }
         }
@@ -248,9 +231,9 @@ namespace Autobuilder {
         /// Saves a list of floats with the specified key.
         /// </summary>
         public static void SetList(string key, IList<float> list) {
-            JSONArray node = new JSONArray();
+            var node = new JArray();
             for (int i = 0; i < list.Count; i++)
-                node[i] = new JSONNumber(list[i]);
+                node[i] = new JValue(list[i]);
             Prefs[key] = node;
         }
 
@@ -258,16 +241,16 @@ namespace Autobuilder {
         /// Retrieves a list of floats with the specified key and saves it in the provided list.
         /// </summary>
         public static void GetList(string key, ref float[] list) {
-            JSONNode node = Prefs[key];
+            var node = Prefs[key];
             if (node != null) {
-                if (node.IsArray) {
-                    JSONArray tArray = node.AsArray;
+                if (node is JArray) {
+                    var tArray = node as JArray;
                     list = new float[tArray.Count];
                     for (int i = 0; i < tArray.Count; i++)
-                        list[i] = tArray[i].AsFloat;
-                } else if (node.IsNumber) {
+                        list[i] = (float) tArray[i];
+                } else if (node.Type == JTokenType.Integer) {
                     list = new float[1];
-                    list[1] = node.AsFloat;
+                    list[1] = (int) node;
                 }
             } else
                 list = new float[0];
@@ -280,14 +263,14 @@ namespace Autobuilder {
             if (list == null)
                 list = new List<float>();
             list.Clear();
-            JSONNode node = Prefs[key];
+            var node = Prefs[key];
             if (node != null) {
-                if (node.IsArray) {
-                    JSONArray tArray = node.AsArray;
+                if (node is JArray) {
+                    var tArray = node as JArray;
                     for (int i = 0; i < tArray.Count; i++)
-                        list.Add(tArray[i].AsFloat);
-                } else if (node.IsNumber) {
-                    list.Add(node.AsFloat);
+                        list.Add((float) tArray[i]);
+                } else if (node.Type == JTokenType.Float) {
+                    list.Add((float) node);
                 }
             }
         }
@@ -297,9 +280,9 @@ namespace Autobuilder {
         /// Saves a list of doubles with the specified key.
         /// </summary>
         public static void SetList(string key, IList<double> list) {
-            JSONArray node = new JSONArray();
+            var node = new  JArray();
             for (int i = 0; i < list.Count; i++)
-                node[i] = new JSONNumber(list[i]);
+                node[i] = new JValue(list[i]);
             Prefs[key] = node;
         }
 
@@ -307,16 +290,16 @@ namespace Autobuilder {
         /// Retrieves a list of doubles with the specified key and saves it in the provided list.
         /// </summary>
         public static void GetList(string key, ref double[] list) {
-            JSONNode node = Prefs[key];
+            var node = Prefs[key];
             if (node != null) {
-                if (node.IsArray) {
-                    JSONArray tArray = node.AsArray;
+                if (node is JArray) {
+                     JArray tArray = node as JArray;
                     list = new double[tArray.Count];
                     for (int i = 0; i < tArray.Count; i++)
-                        list[i] = tArray[i].AsFloat;
-                } else if (node.IsNumber) {
+                        list[i] = (float) tArray[i];
+                } else if (node.Type == JTokenType.Float) {
                     list = new double[1];
-                    list[1] = node.AsFloat;
+                    list[1] = (float) node;
                 }
             } else
                 list = new double[0];
@@ -329,21 +312,21 @@ namespace Autobuilder {
             if (list == null)
                 list = new List<double>();
             list.Clear();
-            JSONNode node = Prefs[key];
+            var node = Prefs[key];
             if (node != null) {
-                if (node.IsArray) {
-                    JSONArray tArray = node.AsArray;
+                if (node is JArray) {
+                     JArray tArray = node as JArray;
                     for (int i = 0; i < tArray.Count; i++)
-                        list.Add(tArray[i].AsDouble);
-                } else if (node.IsNumber) {
-                    list.Add(node.AsDouble);
+                        list.Add((double) tArray[i]);
+                } else if (node.Type == JTokenType.Float) {
+                    list.Add((double) node);
                 }
             }
         }
 
         public static void Save() {
             Directory.CreateDirectory(SETTINGS_PATH);
-            File.WriteAllText(FilePath, Prefs.ToString());
+            File.WriteAllText(FilePath, Prefs.ToString(Newtonsoft.Json.Formatting.Indented));
         }
 
         /// <summary>
@@ -358,7 +341,7 @@ namespace Autobuilder {
         /// Removes all keys and values from the preferences. Use with caution.
         /// </summary>
         public static void DeleteAll() {
-            m_Prefs = new JSONObject();
+            m_Prefs = new JObject();
             Save();
         }
 
@@ -366,7 +349,7 @@ namespace Autobuilder {
         /// Returns true if the key exists in the preferences file.
         /// </summary>
         public static bool HasKey(string key) {
-            return Prefs[key] != null;
+            return Prefs.ContainsKey(key);
         }
     }
 }

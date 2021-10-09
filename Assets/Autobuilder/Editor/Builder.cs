@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
+using Newtonsoft.Json.Linq;
 using UnityEditor;
 #if UNITY_2018_1_OR_NEWER
 using UnityEditor.Build.Reporting;
@@ -57,7 +58,7 @@ namespace Autobuilder {
         }
         #endregion
 
-        static readonly IBuildModule[] MODULES = {
+        static readonly BuildModule[] MODULES = {
             new WindowsModule(),
             new LinuxModule(),
             new OSXModule(),
@@ -71,7 +72,7 @@ namespace Autobuilder {
         static string m_DataPath;
         public static string DataPath {
             get {
-                if ( string.IsNullOrEmpty(m_DataPath) )
+                if (string.IsNullOrEmpty(m_DataPath))
                     m_DataPath = Application.dataPath.Substring(0, Application.dataPath.Length - "/Assets".Length);
                 return m_DataPath;
             }
@@ -79,7 +80,7 @@ namespace Autobuilder {
         static GUIStyle m_AreaStyle;
         public static GUIStyle AreaStyle {
             get {
-                if ( m_AreaStyle == null || m_AreaStyle.normal.background == null ) {
+                if (m_AreaStyle == null || m_AreaStyle.normal.background == null) {
                     m_AreaStyle = new GUIStyle(EditorStyles.helpBox);
                 }
                 return m_AreaStyle;
@@ -89,14 +90,14 @@ namespace Autobuilder {
         static Texture2D m_SelectedTexture;
         public static GUIStyle SelectedAreaStyle {
             get {
-                if ( m_SelectedAreaStyle == null ) {
+                if (m_SelectedAreaStyle == null) {
                     m_SelectedAreaStyle = new GUIStyle(AreaStyle);
                     m_SelectedTexture = new Texture2D(1, 1);
                     m_SelectedTexture.SetPixel(0, 0, new Color(0.423f, 0.498f, 0.431f));
                     m_SelectedTexture.Apply();
                     m_SelectedAreaStyle.normal.background = m_SelectedTexture;
                 }
-                if ( m_SelectedAreaStyle.normal.background == null ) {
+                if (m_SelectedAreaStyle.normal.background == null) {
                     m_SelectedTexture = new Texture2D(1, 1);
                     m_SelectedTexture.SetPixel(0, 0, new Color(0.423f, 0.498f, 0.431f));
                     m_SelectedTexture.Apply();
@@ -106,10 +107,76 @@ namespace Autobuilder {
             }
         }
 
+        int selectedModule;
+        string[] moduleOptions;
+        List<BuildModule> modules;
+
         [MenuItem("File/Autobuilder...")]
         [MenuItem("Tools/Autobuilder...")]
         public static void ShowWindow() {
             GetWindow<Builder>("Builder");
+        }
+
+        void LoadModules() {
+            modules.Clear();
+            if (!Directory.Exists(BuildModule.BASE_DIR)) {
+                Directory.CreateDirectory(BuildModule.BASE_DIR);
+            }
+            var files = Directory.GetFiles(BuildModule.BASE_DIR, "*.bm");
+            foreach (var filename in files) {
+                var rootNode = JObject.Parse(File.ReadAllText(filename));
+                var moduleTarget = rootNode["ModuleTarget"];
+                if (moduleTarget != null) {
+                    var module = GetModule((string) moduleTarget);
+                    if (module != null) {
+                        module.ModuleName = Path.GetFileNameWithoutExtension(filename);
+                        module.Load();
+                        modules.Add(module);
+                    }
+                }
+            }
+
+            SortModules();
+        }
+
+        int ModuleSorting(BuildModule module1, BuildModule module2) {
+            return module1.SortingIndex.CompareTo(module2.SortingIndex);
+        }
+
+        void SortModules() {
+            modules.Sort(ModuleSorting);
+
+            for (int i = 0; i < modules.Count; i++) {
+                modules[i].SortingIndex = i * 2;
+                modules[i].Save();
+            }
+        }
+
+        BuildModule GetModule(string moduleTarget) {
+            for (int i = 0; i < MODULES.Length; i++) {
+                if (MODULES[i].ModuleTarget == moduleTarget) return GetModule(MODULES[i]);
+            }
+            return null;
+        }
+
+        BuildModule GetModule(BuildModule baseModule) {
+            if (baseModule is WindowsModule) return new WindowsModule();
+            if (baseModule is LinuxModule) return new LinuxModule();
+            if (baseModule is OSXModule) return new OSXModule();
+            if (baseModule is AndroidModule) return new AndroidModule();
+            if (baseModule is IOSModule) return new IOSModule();
+            if (baseModule is TVOSModule) return new TVOSModule();
+            if (baseModule is WebGLModule) return new WebGLModule();
+            return null;
+        }
+
+        string GetAvailableModuleFileName(string name) {
+            var num = -1;
+            do {
+                num++;
+            } while (File.Exists(Path.Combine(BuildModule.BASE_DIR, $"{name} {num}.bm")));
+
+            return $"{name} {num}";
         }
 
         public static bool TargetModuleInstalled(BuildTarget target) {
@@ -119,9 +186,20 @@ namespace Autobuilder {
             var getTargetStringFromBuildTarget = moduleManager.GetMethod("GetTargetStringFromBuildTarget",
                 System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
 
-            return (bool)isPlatformSupportLoaded.Invoke(null, new object[] {
+            return (bool) isPlatformSupportLoaded.Invoke(null, new object[] {
                 (string)getTargetStringFromBuildTarget.Invoke(null, new object[] { target })
             });
+        }
+
+        void OnEnable() {
+            modules = new List<BuildModule>();
+
+            moduleOptions = new string[MODULES.Length];
+            for (int i = 0; i < moduleOptions.Length; i++) {
+                moduleOptions[i] = MODULES[i].ModuleTarget;
+            }
+
+            LoadModules();
         }
 
         private void OnDisable() {
@@ -131,9 +209,8 @@ namespace Autobuilder {
         private void OnGUI() {
             GUILayout.Space(10);
             bool makeBuild = false;
-            IBuildModule buildModule = null;
-            Func<bool, bool> tBuildFunction = null;
-            bool tDevelopment = false;
+            var buildModules = new List<BuildModule>();
+            bool development = false;
 
             EditorGUI.BeginChangeCheck();
             GUIContent tContent = new GUIContent("Builds root dir",
@@ -151,93 +228,79 @@ namespace Autobuilder {
             AutoIncreaseBuild = GUILayout.Toggle(AutoIncreaseBuild, "Automatically increase build number");
             bool tStartWithCurrent = GUILayout.Toggle(StartWithCurrent, "Start with current platform");
             bool tEndWithCurrent = GUILayout.Toggle(EndWithCurrent, "End with current platform");
-            if ( tStartWithCurrent && tEndWithCurrent ) {
-                if ( !StartWithCurrent )
+            if (tStartWithCurrent && tEndWithCurrent) {
+                if (!StartWithCurrent)
                     tEndWithCurrent = false;
-                else if ( !EndWithCurrent )
+                else if (!EndWithCurrent)
                     tStartWithCurrent = false;
             }
             SwitchToCurrent = GUILayout.Toggle(SwitchToCurrent, "Switch to current platform when done");
 
+            GUILayout.BeginHorizontal();
+            selectedModule = EditorGUILayout.Popup(selectedModule, moduleOptions);
+            if (GUILayout.Button("New module")) {
+                var newModuleInfo = GetModule(MODULES[selectedModule]);
+                newModuleInfo.ModuleName = GetAvailableModuleFileName(newModuleInfo.ModuleTarget);
+                newModuleInfo.Save();
+                LoadModules();
+            }
+            GUILayout.EndHorizontal();
+
+            if (GUILayout.Button("RELOAD MODULES")) {
+                LoadModules();
+            }
+
             m_ScrollPos = GUILayout.BeginScrollView(m_ScrollPos);
+            for (int i = 0; i < modules.Count; i++) {
+                GUILayout.Space(10);
+                var module = modules[i];
+                bool isTarget = module.IsTarget(
+                    EditorUserBuildSettings.activeBuildTarget);
 
-            EditorGUI.BeginChangeCheck();
-            for ( int i = 0; i < MODULES.Length; i++ ) {
-                var module = MODULES[i];
-                if ( TargetModuleInstalled(module.Target) ) {
-                    bool isTarget = module.IsTarget(
-                        EditorUserBuildSettings.activeBuildTarget);
-                    GUILayout.BeginVertical(isTarget ? SelectedAreaStyle : AreaStyle);
+                EditorGUI.BeginChangeCheck();
+                var moduleName = module.ModuleName;
+                module.OnGUI(out makeBuild, out development);
+                if (makeBuild) {
+                    buildModules.Add(module);
+                }
 
+                if (EditorGUI.EndChangeCheck()) {
+                    if (moduleName != module.ModuleName) {
+                        File.Delete($"{BuildModule.BASE_DIR}/{moduleName}.bm");
+                    }
+                    module.Save();
+                }
+
+                if (TargetModuleInstalled(module.Target)) {
                     GUILayout.BeginHorizontal();
-                    if ( !isTarget ) {
-                        if ( GUILayout.Button(module.Name,
-                                GUILayout.MaxWidth(COLUMN0))
-                        ) {
+                    if (!isTarget) {
+                        if (GUILayout.Button("Switch to target")) {
                             EditorUserBuildSettings.SwitchActiveBuildTargetAsync(
                                 module.TargetGroup, module.Target);
                         }
-                    } else {
-                        GUILayout.Label(module.Name, EditorStyles.boldLabel,
-                            GUILayout.MaxWidth(COLUMN0));
                     }
-                    GUILayout.Label("Build:", GUILayout.MaxWidth(COLUMN1_HALF));
-                    module.BuildNumber =
-                        EditorGUILayout.IntField(module.BuildNumber,
-                        GUILayout.MaxWidth(COLUMN1_HALF));
-
-                    if ( GUILayout.Button("Build") ) {
+                    if (GUILayout.Button("Build")) {
                         makeBuild = true;
-                        tBuildFunction = module.BuildGame;
-                        buildModule = module;
+                        buildModules.Add(module);
                     }
-                    if ( GUILayout.Button("Development build") ) {
+                    if (GUILayout.Button("Development build")) {
                         makeBuild = true;
-                        tBuildFunction = module.BuildGame;
-                        tDevelopment = true;
-                        buildModule = module;
+                        buildModules.Add(module);
+                        development = true;
                     }
                     GUILayout.EndHorizontal();
-
-                    
-                    bool unfold = PlayerPrefs.GetInt("AutoBuilder.Unfold." + module.Target) > 0;
-                    EditorGUI.BeginChangeCheck();
-                    unfold = EditorGUILayout.Foldout(unfold, "Settings");
-                    if ( EditorGUI.EndChangeCheck() ) {
-                        PlayerPrefs.SetInt("AutoBuilder.Unfold." + module.Target, unfold ? 1 : 0);
-                    }
-                    bool build = false;
-                    bool development = false;
-                    if ( unfold ) {
-                        EditorGUI.indentLevel++;
-                        module.OnGUI(out build, out development);
-                        EditorGUI.indentLevel--;
-                    }
-
-                    GUILayout.EndVertical();
-                    if ( build ) {
-                        makeBuild = true;
-                        tBuildFunction = module.BuildGame;
-                        tDevelopment = development;
-                        buildModule = module;
-                    }
                 } else {
-                    GUILayout.BeginVertical(AreaStyle);
                     GUILayout.Label("Module " + module.Target + " not installed");
-                    GUILayout.EndVertical();
                 }
-            }
-
-            if ( EditorGUI.EndChangeCheck() ) {
-                EditorProjectPrefs.Save();
             }
 
             GUILayout.EndScrollView();
 
-            if ( EditorGUI.EndChangeCheck() ) {
+            if (EditorGUI.EndChangeCheck()) {
                 StartWithCurrent = tStartWithCurrent;
                 EndWithCurrent = tEndWithCurrent;
                 BuildPath = PathFunctions.GetRelativePath(tBuildPath, DataPath);
+                SortModules();
                 EditorProjectPrefs.Save();
             }
             // Buttons
@@ -247,139 +310,117 @@ namespace Autobuilder {
                 EditorApplication.ExecuteMenuItem("Edit/Project Settings/Player");
             }
 #endif
-            if ( GUILayout.Button("Build settings") ) {
+            if (GUILayout.Button("Build settings")) {
                 GetWindow<BuildPlayerWindow>();
             }
-            if ( GUILayout.Button("Build ALL") ) {
+            if (GUILayout.Button("Build ALL")) {
                 makeBuild = true;
-                tBuildFunction = BuildGameAll;
-                buildModule = null;
-                tDevelopment = false;
+                development = false;
+                buildModules.AddRange(modules);
             }
-            if ( GUILayout.Button("Build ALL development") ) {
+            if (GUILayout.Button("Build ALL development")) {
                 makeBuild = true;
-                tBuildFunction = BuildGameAll;
-                buildModule = null;
-                tDevelopment = true;
+                development = true;
+                buildModules.AddRange(modules);
             }
             GUILayout.EndHorizontal();
 
-            if ( makeBuild ) {
-                if ( !tDevelopment ) {
-                    if ( buildModule != null && AutoIncreaseBuild ) {
-                        buildModule.BuildNumber++;
-                    }
-                }
-                if (
-                    !tBuildFunction(tDevelopment) &&
-                    !tDevelopment &&
-                    AutoIncreaseBuild &&
-                    buildModule != null &&
-                    true
-                ) {
-                    buildModule.BuildNumber--;
-                }
+            if (makeBuild) {
+                BuildGame(modules, development);
             }
         }
 
-        public static bool BuildGameAll(bool aDevelopment) {
-            List<IBuildModule> tBuildOrder = new List<IBuildModule>();
-            BuildTarget tCurrent = EditorUserBuildSettings.activeBuildTarget;
-            BuildTargetGroup tCurrentGroup =
-                EditorUserBuildSettings.selectedBuildTargetGroup;
-            for ( int i = 0; i < MODULES.Length; i++ ) {
-                var module = MODULES[i];
-                if ( module.Enabled ) {
-                    if ( !aDevelopment ) {
+        public static bool BuildGame(List<BuildModule> modules, bool development) {
+            List<BuildModule> buildOrder = new List<BuildModule>();
+            BuildTarget currentTarget = EditorUserBuildSettings.activeBuildTarget;
+            BuildTargetGroup tCurrentGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
+            for (int i = 0; i < modules.Count; i++) {
+                var module = modules[i];
+                if (module.Enabled && TargetModuleInstalled(module.Target)) {
+                    if (!development) {
                         module.BuildNumber++;
                     }
-                    if ( StartWithCurrent && module.IsTarget(tCurrent) ) {
-                        tBuildOrder.Insert(0, module);
+                    if (StartWithCurrent && module.IsTarget(currentTarget)) {
+                        buildOrder.Insert(0, module);
                     } else {
-                        tBuildOrder.Add(module);
+                        buildOrder.Add(module);
                     }
                 }
             }
 
-            if ( EndWithCurrent ) {
-                for ( int i = 0; i < MODULES.Length; i++ ) {
-                    var module = MODULES[i];
-                    if ( module.Enabled ) {
-                        if ( module.IsTarget(tCurrent) ) {
-                            tBuildOrder.Remove(module);
-                            tBuildOrder.Add(module);
-                        }
+            if (EndWithCurrent) {
+                for (int i = 0; i < buildOrder.Count; i++) {
+                    var module = buildOrder[i];
+                    if (module.IsTarget(currentTarget)) {
+                        buildOrder.RemoveAt(i);
+                        buildOrder.Add(module);
+                        break;
                     }
                 }
             }
 
             bool result = true;
-            foreach ( var module in tBuildOrder ) {
-                if ( !module.BuildGame(aDevelopment) ) {
+            foreach (var module in buildOrder) {
+                Debug.Log($"Build {module.ModuleName} ({module.GetType()})");
+                if (!module.BuildGame(development)) {
+                    module.BuildNumber--;
                     result = false;
-                    if ( aDevelopment ) {
-                        module.BuildNumber--;
-                    }
                 }
+                module.Save();
             }
 
-            if ( SwitchToCurrent ) {
-                EditorUserBuildSettings.SwitchActiveBuildTargetAsync(tCurrentGroup, tCurrent);
+            if (SwitchToCurrent) {
+                EditorUserBuildSettings.SwitchActiveBuildTarget(tCurrentGroup, currentTarget);
             }
 
             return result;
         }
 
 #if UNITY_2018_1_OR_NEWER
-        public static BuildReport BuildGame(BuildTarget aTarget, string aPath, bool aDevelopment = false)
+        public static BuildReport BuildGame(BuildTargetGroup buildTargetGroup, BuildTarget buildTarget, string buildPath, string[] scenes, bool development = false)
 #else
-        public static string BuildGame(BuildTarget aTarget, bool aDevelopment = false)
+        public static string BuildGame(BuildTargetGroup buildTargetGroup, BuildTarget buildTarget, string[] scenes, bool development = false)
 #endif
         {
+            Debug.Log($"Switch to {buildTargetGroup}:{buildTarget}");
+            EditorUserBuildSettings.SwitchActiveBuildTarget(buildTargetGroup, buildTarget);
             // Build player
-            List<string> tScenes = new List<string>();
-
-            for ( int i = 0; i < EditorBuildSettings.scenes.Length; i++ ) {
-                if ( EditorBuildSettings.scenes[i].enabled )
-                    tScenes.Add(EditorBuildSettings.scenes[i].path);
-            }
-
             BuildPlayerOptions tOptions = new BuildPlayerOptions {
-                locationPathName = aPath,
-                target = aTarget,
-                options = (aDevelopment ? BuildOptions.Development | BuildOptions.AllowDebugging
+                locationPathName = buildPath,
+                target = buildTarget,
+                options = (development ? BuildOptions.Development | BuildOptions.AllowDebugging
                     : BuildOptions.None),
-                scenes = tScenes.ToArray(),
+                scenes = scenes,
             };
 
             // Pre processors
-            RunPreProcessor(aTarget, aDevelopment);
+            RunPreProcessor(buildTarget, development);
 
 #if UNITY_2018_1_OR_NEWER
             BuildReport tReport = BuildPipeline.BuildPlayer(tOptions);
-            Debug.Log("Build " + aTarget + ": " + tReport.summary.result);
-            if ( tReport.summary.result == BuildResult.Succeeded )
+            Debug.Log("Build " + buildTarget + ": " + tReport.summary.result);
+            if (tReport.summary.result == BuildResult.Succeeded)
 #else
             string tReport = BuildPipeline.BuildPlayer(tOptions);
             Debug.Log("Build " + aTarget + ": " + tReport);
             if (string.IsNullOrEmpty(tReport))
 #endif
             {
-                EditorUserBuildSettings.SetBuildLocation(aTarget, tOptions.locationPathName);
+                EditorUserBuildSettings.SetBuildLocation(buildTarget, tOptions.locationPathName);
                 EditorUtility.RevealInFinder(tOptions.locationPathName);
             }
 
             // Post processors
-            RunPostProcessor(aTarget, aDevelopment, tReport);
+            RunPostProcessor(buildTarget, development, tReport);
 
             return tReport;
         }
 
         // Currently not working
         static void RunPreProcessor(BuildTarget aTarget, bool aDevelopment) {
-            foreach ( Type type in AttributeFinder.GetTypesWithAttribute<BuildPreProcessAttribute>(AppDomain.CurrentDomain) ) {
-                if ( type.IsSubclassOf(typeof(IBuildPreProcessor)) )
-                    ((IBuildPreProcessor)Activator.CreateInstance(type)).PreProcess(aTarget, aDevelopment);
+            foreach (Type type in AttributeFinder.GetTypesWithAttribute<BuildPreProcessAttribute>(AppDomain.CurrentDomain)) {
+                if (type.IsSubclassOf(typeof(IBuildPreProcessor)))
+                    ((IBuildPreProcessor) Activator.CreateInstance(type)).PreProcess(aTarget, aDevelopment);
             }
         }
 
@@ -389,9 +430,9 @@ namespace Autobuilder {
         static void RunPostProcessor(BuildTarget aTarget, bool aDevelopment, string aReport)
 #endif
         {
-            foreach ( Type type in AttributeFinder.GetTypesWithAttribute<BuildPostProcessAttribute>(AppDomain.CurrentDomain) ) {
-                if ( type.IsSubclassOf(typeof(IBuildPostProcessor)) )
-                    ((IBuildPostProcessor)Activator.CreateInstance(type)).PostProcess(aTarget, aDevelopment, aReport);
+            foreach (Type type in AttributeFinder.GetTypesWithAttribute<BuildPostProcessAttribute>(AppDomain.CurrentDomain)) {
+                if (type.IsSubclassOf(typeof(IBuildPostProcessor)))
+                    ((IBuildPostProcessor) Activator.CreateInstance(type)).PostProcess(aTarget, aDevelopment, aReport);
             }
         }
     }

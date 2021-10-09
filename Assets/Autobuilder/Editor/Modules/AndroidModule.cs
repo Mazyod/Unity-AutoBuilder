@@ -4,61 +4,53 @@ using UnityEditor.Build.Reporting;
 using UnityEngine;
 
 namespace Autobuilder {
-    public class AndroidModule : IBuildModule {
-        const string BUILD_ANDROID = Builder.BUILDER + "BuildAndroid";
-        const string RUN_ANDROID = Builder.BUILDER + "RunAndroid";
-        const string ANDROID_KEYSTORE_PASS = Builder.BUILDER + "AndroidKeystorePass";
-        const string ANDROID_KEYALIAS_PASS = Builder.BUILDER + "AndroidKeyAliasPass";
-        const string BUILD_DIR_ANDROID = "/Android";
+    public class AndroidModule : BuildModule {
+        const string BUILD_ANDROID = "BuildAndroid";
+        const string RUN_ANDROID = "RunAndroid";
+        const string ANDROID_KEYSTORE_PASS = "AndroidKeystorePass";
+        const string ANDROID_KEYALIAS_PASS = "AndroidKeyAliasPass";
 
-        public string Name { get { return "Android"; } }
-        public BuildTargetGroup TargetGroup { get { return BuildTargetGroup.Android; } }
-        public BuildTarget Target { get { return BuildTarget.Android; } }
+        public override BuildTargetGroup TargetGroup { get { return BuildTargetGroup.Android; } }
+        public override BuildTarget Target { get { return BuildTarget.Android; } }
 
-        public bool Enabled {
-            get { return EditorProjectPrefs.GetBool(BUILD_ANDROID, true); }
-            set { EditorProjectPrefs.SetBool(BUILD_ANDROID, value); }
+        public bool RunAndroid {
+            get { return GetBool(RUN_ANDROID, true); }
+            set { SetBool(RUN_ANDROID, value); }
         }
-        public static bool RunAndroid {
-            get { return EditorProjectPrefs.GetBool(RUN_ANDROID, true); }
-            set { EditorProjectPrefs.SetBool(RUN_ANDROID, value); }
+        public string AndroidKeyAliasPass {
+            get { return GetString(ANDROID_KEYALIAS_PASS, PlayerSettings.Android.keyaliasPass); }
+            set { SetString(ANDROID_KEYALIAS_PASS, value); }
         }
-        public static string AndroidKeyAliasPass {
-            get { return EditorProjectPrefs.GetString(ANDROID_KEYALIAS_PASS, PlayerSettings.Android.keyaliasPass); }
-            set { EditorProjectPrefs.SetString(ANDROID_KEYALIAS_PASS, value); }
-        }
-        public static string AndroidKeyStorePass {
-            get { return EditorProjectPrefs.GetString(ANDROID_KEYSTORE_PASS, PlayerSettings.Android.keystorePass); }
-            set { EditorProjectPrefs.SetString(ANDROID_KEYSTORE_PASS, value); }
+        public string AndroidKeyStorePass {
+            get { return GetString(ANDROID_KEYSTORE_PASS, PlayerSettings.Android.keystorePass); }
+            set { SetString(ANDROID_KEYSTORE_PASS, value); }
         }
 
-        public int BuildNumber {
-            get { return PlayerSettings.Android.bundleVersionCode; }
-            set { PlayerSettings.Android.bundleVersionCode = value; }
-        }
-
-        public bool IsTarget(BuildTarget aTarget) {
+        public override bool IsTarget(BuildTarget aTarget) {
             return aTarget == BuildTarget.Android;
         }
 
-        public bool BuildGame(bool aDevelopment = false) {
+        public override bool BuildGame(bool development = false) {
+            if (!base.BuildGame(development)) return false;
+
             PlayerSettings.Android.keystorePass = AndroidKeyStorePass;
             PlayerSettings.Android.keyaliasPass = AndroidKeyAliasPass;
+            PlayerSettings.Android.bundleVersionCode = BuildNumber;
 
             // Build Game
 #if UNITY_2018_1_OR_NEWER
-            BuildReport tReport = Builder.BuildGame(BuildTarget.Android,
-                GetBuildPath(aDevelopment), aDevelopment);
+            BuildReport tReport = Builder.BuildGame(BuildTargetGroup.Android, BuildTarget.Android,
+                GetBuildPath(development), GetScenesList(), development);
             if ( tReport.summary.result == BuildResult.Succeeded )
 #else
-            string tReport = BuildGame(BuildTarget.Android,
+            string tReport = Builder.BuildGame(BuildTargetGroup.Android, BuildTarget.Android,
                 GetBuildPath(aDevelopment), aDevelopment);
             if (string.IsNullOrEmpty(tReport))
 #endif
             {
                 if ( RunAndroid ) {
                     AndroidInterfaceTool.InstallToDevice(
-                        GetBuildPath(aDevelopment));
+                        GetBuildPath(development));
                 }
                 return true;
             } else {
@@ -67,8 +59,7 @@ namespace Autobuilder {
         }
 
         public string GetBuildPath(bool aDevelopment) {
-            string tPath = Builder.DataPath + "/" + Builder.BuildPath
-                + BUILD_DIR_ANDROID;
+            string tPath = BaseBuildPath;
 
             if ( aDevelopment ) {
                 tPath += "/dev";
@@ -86,11 +77,10 @@ namespace Autobuilder {
             return tPath;
         }
 
-        public void OnGUI(out bool aBuild, out bool aDevelopment) {
-            aBuild = false;
-            aDevelopment = false;
+        public override void OptionsGUI(out bool build, out bool development) {
+            build = false;
+            development = false;
 
-            Enabled = EditorGUILayout.Toggle("Build android version", Enabled);
             GUILayout.BeginHorizontal();
             RunAndroid = EditorGUILayout.Toggle("Install and run on device", RunAndroid);
             if ( GUILayout.Button("Install last version") )
@@ -99,12 +89,15 @@ namespace Autobuilder {
             EditorGUI.BeginChangeCheck();
             string tAndroiddentifier = EditorGUILayout.TextField("Bundle identifier",
                 PlayerSettings.GetApplicationIdentifier(BuildTargetGroup.Android));
+            var keyStorePass = EditorGUILayout.TextField("Keystore password", AndroidKeyStorePass);
+            var keyAliasPass = EditorGUILayout.TextField("Key alias password", AndroidKeyAliasPass);
+            
             if ( EditorGUI.EndChangeCheck() ) {
                 PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android,
                     tAndroiddentifier);
+                AndroidKeyStorePass = keyStorePass;
+                AndroidKeyAliasPass = keyAliasPass;
             }
-            AndroidKeyStorePass = EditorGUILayout.TextField("Keystore password", AndroidKeyStorePass);
-            AndroidKeyAliasPass = EditorGUILayout.TextField("Key alias password", AndroidKeyAliasPass);
         }
     }
 }
