@@ -32,3 +32,4 @@ Assets/StreamingAssets.meta
 *.pyc
 client_secrets.json
 /publishing/android/achievements/androidpublisher.dat
+/Logs/
