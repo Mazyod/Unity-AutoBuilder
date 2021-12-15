@@ -4,14 +4,15 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.iOS.Xcode;
 using UnityEditor.Callbacks;
-using Autobuilder.SimpleJSON;
 using System.Collections.Generic;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Autobuilder {
     public class XCodePostProcessor {
         [PostProcessBuildAttribute(0)]
         public static void OnPostprocessBuild(BuildTarget buildTarget, string pathToBuiltProject) {
-            if ( buildTarget != BuildTarget.iOS && buildTarget != BuildTarget.tvOS )
+            if (buildTarget != BuildTarget.iOS && buildTarget != BuildTarget.tvOS)
                 return;
 
             ProcessPbxProject(buildTarget, pathToBuiltProject);
@@ -41,13 +42,13 @@ namespace Autobuilder {
             pbxProject.WriteToFile(pbxProjectPath);
 
             var capabilityManager = new ProjectCapabilityManager(pbxProjectPath, entitlementsFilePath, targetName);
-            JSONArray Capabilities;
-            JSONArray Files;
-            if ( buildTarget == BuildTarget.iOS ) {
+            JArray Capabilities;
+            JArray Files;
+            if (buildTarget == BuildTarget.iOS) {
                 var module = new IOSModule();
                 Capabilities = module.Capabilities;
                 Files = module.Files;
-            } else if ( buildTarget == BuildTarget.tvOS ) {
+            } else if (buildTarget == BuildTarget.tvOS) {
                 var module = new TVOSModule();
                 Capabilities = module.Capabilities;
                 Files = module.Files;
@@ -55,38 +56,38 @@ namespace Autobuilder {
                 return;
             }
 
-            for ( int i = 0; i < Capabilities.Count; i++ ) {
+            for (int i = 0; i < Capabilities.Count; i++) {
                 var node = Capabilities[i];
-                var type = (XCodeModule.CapabilityType) node[XCodeModule.CAPABILITY_TYPE].AsInt;
-                
-                switch ( type ) {
+                var type = (XCodeModule.CapabilityType)(int)node[XCodeModule.CAPABILITY_TYPE];
+
+                switch (type) {
                     case XCodeModule.CapabilityType.iCloud:
                         bool enableKeyValueStorage = false;
                         bool enableiCloudDocument = false;
                         bool enableCloudKit = false;
 
                         var subNode = node[XCodeModule.ENABLE_KEYVALUE_STORAGE];
-                        if ( subNode != null && subNode.IsBoolean ) {
-                            enableKeyValueStorage = subNode.AsBool;
+                        if (subNode != null && subNode.Type == JTokenType.Boolean) {
+                            enableKeyValueStorage = (bool)subNode;
                         }
 
                         subNode = node[XCodeModule.ENABLE_ICLOUD_DOCUMENT];
-                        if ( subNode != null && subNode.IsBoolean ) {
-                            enableiCloudDocument = subNode.AsBool;
+                        if (subNode != null && subNode.Type == JTokenType.Boolean) {
+                            enableiCloudDocument = (bool)subNode;
                         }
 
                         subNode = node[XCodeModule.ENABLE_CLOUDKIT];
-                        if ( subNode != null && subNode.IsBoolean ) {
-                            enableCloudKit = subNode.AsBool;
+                        if (subNode != null && subNode.Type == JTokenType.Boolean) {
+                            enableCloudKit = (bool)subNode;
                         }
 
                         string[] customContainers;
                         subNode = node[XCodeModule.ICLOUD_CUSTOM_CONTAINERS];
-                        if ( subNode != null && subNode.IsArray ) {
+                        if (subNode != null && subNode.Type == JTokenType.Array) {
                             List<string> containersList = new List<string>();
-                            foreach ( JSONNode item in subNode.AsArray ) {
-                                if ( item.IsString ) {
-                                    containersList.Add(item.Value);
+                            foreach (JToken item in subNode.AsJEnumerable<JToken>()) {
+                                if (item.Type == JTokenType.String) {
+                                    containersList.Add(item.Value<string>());
                                 }
                             }
                             customContainers = containersList.ToArray();
@@ -101,11 +102,11 @@ namespace Autobuilder {
                     case XCodeModule.CapabilityType.AssociatedDomains:
                         string[] associatedDomains;
                         subNode = node[XCodeModule.ASSOCIATED_DOMAINS];
-                        if ( subNode != null && subNode.IsArray ) {
+                        if (subNode != null && subNode.Type == JTokenType.Array) {
                             List<string> containersList = new List<string>();
-                            foreach ( JSONNode item in subNode.AsArray ) {
-                                if ( item.IsString ) {
-                                    containersList.Add(item.Value);
+                            foreach (var item in subNode.AsJEnumerable<JToken>()) {
+                                if (item.Type == JTokenType.String) {
+                                    containersList.Add(item.Value<string>());
                                 }
                             }
                             associatedDomains = containersList.ToArray();
@@ -119,13 +120,13 @@ namespace Autobuilder {
             capabilityManager.WriteToFile();
 
             for (int i = 0; i < Files.Count; i++) {
-                var file = Files[i].Value;
+                var file = Files[i].Value<string>();
                 Debug.Log(file);
                 if (Directory.Exists(file)) {
-                    Debug.Log("\tIs a directory");
+                    //Debug.Log("\tIs a directory");
                     Directory.Move(file, Path.Combine(pathToBuiltProject, Path.GetDirectoryName(file)));
                 } else if (File.Exists(file)) {
-                    Debug.Log("\tIs a file");
+                    //Debug.Log("\tIs a file");
                     File.Move(file, Path.Combine(pathToBuiltProject, Path.GetFileName(file)));
                 }
             }
@@ -133,15 +134,15 @@ namespace Autobuilder {
 
         public static void ProcessInfoPlist(BuildTarget buildTarget, string pathToBuiltProject) {
             var plistPath = Path.Combine(pathToBuiltProject, "Info.plist");
-            if ( !File.Exists(plistPath) ) return;
-            
+            if (!File.Exists(plistPath)) return;
+
             var plist = new PlistDocument();
             plist.ReadFromFile(plistPath);
 
-            JSONObject plistData;
-            if ( buildTarget == BuildTarget.iOS ) {
+            JObject plistData;
+            if (buildTarget == BuildTarget.iOS) {
                 plistData = new IOSModule().Plist;
-            } else if ( buildTarget == BuildTarget.tvOS ) {
+            } else if (buildTarget == BuildTarget.tvOS) {
                 plistData = new TVOSModule().Plist;
             } else {
                 return;
@@ -153,61 +154,74 @@ namespace Autobuilder {
             plist.WriteToFile(plistPath);
         }
 
-        static void AddObjectToDocument(PlistDocument document, JSONObject node) {
+        static void AddObjectToDocument(PlistDocument document, JObject node) {
             AddDictToElement(document.root, node);
         }
 
-        static void AddArrayToElement(PlistElementArray element, JSONArray node) {
-            foreach ( JSONNode item in node ) {
+        static void AddArrayToElement(PlistElementArray element, JArray node) {
+            foreach (var item in node) {
                 AddElementToArray(element, item);
             }
         }
 
-        static void AddDictToElement(PlistElementDict element, JSONObject node) {
-            foreach ( var itemKey in node.Keys ) {
-                AddElementToDict(element, itemKey, node[itemKey]);
+        static void AddDictToElement(PlistElementDict element, JObject node) {
+            foreach (var item in node) {
+                AddElementToDict(element, item.Key, item.Value);
             }
         }
 
-        static void AddElementToDict(PlistElementDict element, string key, JSONNode node) {
-            if ( node.IsArray ) {
-                var array = element.CreateArray(key);
-                AddArrayToElement(array, node.AsArray);
-            } else if ( node.IsBoolean ) {
-                element.SetBoolean(key, node.AsBool);
-            } else if ( node.IsString ) {
-                element.SetString(key, node.Value);
-            } else if ( node.IsNumber ) {
-                if ( node.Value.Contains(".") ) {
-                    element.SetReal(key, node.AsFloat);
-                } else {
-                    element.SetInteger(key, node.AsInt);
-                }
-            } else if ( node.IsObject ) {
-                var dict = element.CreateDict(key);
-                AddDictToElement(dict, node.AsObject);
-            } else if ( node.IsNull ) {
-                element.values.Remove(key);
+        static void AddElementToDict(PlistElementDict element, string key, JToken node) {
+            switch (node.Type) {
+                case JTokenType.Array:
+                    var array = element.CreateArray(key);
+                    AddArrayToElement(array, (JArray)node);
+                    break;
+                case JTokenType.Boolean:
+                    element.SetBoolean(key, (bool)node);
+                    break;
+                case JTokenType.String:
+                    element.SetString(key, node.Value<string>());
+                    break;
+                case JTokenType.Integer:
+                    element.SetReal(key, node.Value<int>());
+                    break;
+                case JTokenType.Float:
+                    element.SetReal(key, node.Value<float>());
+                    break;
+                case JTokenType.Object:
+                    var dict = element.CreateDict(key);
+                    AddDictToElement(dict, (JObject)node);
+                    break;
+                case JTokenType.Null:
+                    element.values.Remove(key);
+                    break;
             }
         }
 
-        static void AddElementToArray(PlistElementArray element, JSONNode node) {
-            if ( node.IsBoolean ) {
-                element.AddBoolean(node.AsBool);
-            } else if ( node.IsString ) {
-                element.AddString(node.Value);
-            } else if ( node.IsNumber ) {
-                if ( node.Value.Contains(".") ) {
-                    element.AddReal(node.AsFloat);
-                } else {
-                    element.AddInteger(node.AsInt);
-                }
-            } else if ( node.IsArray ) {
-                var array = element.AddArray();
-                AddArrayToElement(array, node.AsArray);
-            } else if ( node.IsObject ) {
-                var dict = element.AddDict();
-                AddDictToElement(dict, node.AsObject);
+        static void AddElementToArray(PlistElementArray element, JToken node) {
+            switch (node.Type) {
+                case JTokenType.Array:
+                    var array = element.AddArray();
+                    AddArrayToElement(array, (JArray)node);
+                    break;
+                case JTokenType.Boolean:
+                    element.AddBoolean(node.Value<bool>());
+                    break;
+                case JTokenType.String:
+                    element.AddString(node.Value<string>());
+                    break;
+                case JTokenType.Integer:
+                    element.AddInteger(node.Value<int>());
+                    break;
+                case JTokenType.Float:
+                    element.AddReal(node.Value<float>());
+                    break;
+                case JTokenType.Object:
+                    var dict = element.AddDict();
+                    AddDictToElement(dict, (JObject)node);
+                    break;
+                case JTokenType.Null:
+                    break;
             }
         }
     }
