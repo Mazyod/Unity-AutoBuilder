@@ -216,6 +216,7 @@ namespace Autobuilder {
                 DefineSymbols = node as JArray;
             }
             m_DefineSymbolsAdaptor = new JSONNodeAdaptor(DefineSymbols);
+            m_DefineSymbolsAdaptor.ForcedType = JTokenType.String;
         }
 
         public virtual void Load() {

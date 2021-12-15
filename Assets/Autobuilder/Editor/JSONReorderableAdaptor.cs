@@ -98,6 +98,8 @@ namespace Autobuilder {
     }
 
     public class JSONNodeAdaptor : IReorderableListAdaptor {
+        public JTokenType ForcedType = JTokenType.None;
+
         JToken m_Node;
         List<string> m_Keys;
         Dictionary<string, JSONNodeAdaptor> m_NodeAdaptors;
@@ -131,7 +133,21 @@ namespace Autobuilder {
         }
 
         public void Add() {
-            var node = new JObject();
+            JToken node;
+            switch (ForcedType) {
+                case JTokenType.String:
+                    node = new JValue("");
+                    break;
+                case JTokenType.Integer:
+                    node = new JValue(0);
+                    break;
+                case JTokenType.Float:
+                    node = new JValue(0f);
+                    break;
+                default:
+                    node = new JObject();
+                    break;
+            }
             if (m_Node is JObject) (m_Node as JObject).Add(random.Next().ToString(), node);
             if (m_Node is JArray) (m_Node as JArray).Add(node);
         }
@@ -180,12 +196,18 @@ namespace Autobuilder {
                 node = (m_Node as JArray)[index];
             }
 
-            position.width = typeWidth;
-            EditorGUI.BeginChangeCheck();
             JTokenType type = node.Type;
-            var newType = (JTokenType) EditorGUI.EnumPopup(position, type);
-            if (EditorGUI.EndChangeCheck() && newType != type) {
-                JToken newNode = null;
+            JTokenType newType;
+            if (ForcedType != JTokenType.None) {
+                newType = ForcedType;
+                width += typeWidth;
+            } else {
+                position.width = typeWidth;
+                newType = (JTokenType) EditorGUI.EnumPopup(position, type);
+                position.x += position.width;
+            }
+            if (newType != type) {
+                JToken newNode;
                 switch (newType) {
                     case JTokenType.String:
                         try {
@@ -195,7 +217,7 @@ namespace Autobuilder {
                         }
                         break;
                     case JTokenType.Boolean:
-                        bool newVal = false;
+                        bool newVal;
                         if (((string) node).ToUpper() == "NO") {
                             newVal = false;
                         } else if (((string) node).ToUpper() == "YES") {
@@ -253,7 +275,6 @@ namespace Autobuilder {
             }
 
 
-            position.x += position.width;
             position.width = width * total;
             switch (node.Type) {
                 case JTokenType.Boolean:
@@ -337,6 +358,7 @@ namespace Autobuilder {
             if (m_Node is JObject) {
                 key = m_Keys[index];
                 (m_Node as JObject).Remove(key);
+                m_Keys.RemoveAt(index);
             } else {
                 key = index.ToString();
                 (m_Node as JArray).RemoveAt(index);
@@ -344,7 +366,6 @@ namespace Autobuilder {
             if (m_NodeAdaptors.ContainsKey(key)) {
                 m_NodeAdaptors.Remove(key);
             }
-            m_Keys.RemoveAt(index);
         }
     }
 }
