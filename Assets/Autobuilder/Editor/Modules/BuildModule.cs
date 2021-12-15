@@ -132,7 +132,7 @@ namespace Autobuilder {
                 Enabled = EditorGUILayout.Toggle(Enabled, BuildToggle,
                     GUILayout.Width(ARROWS_WIDTH), GUILayout.Height(ARROWS_WIDTH));
             } else {
-                GUILayout.Label($"Module {ModuleName} not installed", OverflowLabel,
+                GUILayout.Label($"Module {Target} not installed", OverflowLabel,
                     GUILayout.Height(ARROWS_WIDTH), GUILayout.Width(ARROWS_WIDTH));
             }
             if (GUILayout.Button(ArrowDownContent, GUILayout.Height(ARROWS_HEIGHT))) {
