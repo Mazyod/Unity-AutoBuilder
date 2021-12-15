@@ -106,6 +106,24 @@ namespace Autobuilder {
                 return m_SelectedAreaStyle;
             }
         }
+        static Texture textureSettings;
+        static Texture TextureSettings {
+            get {
+                if (textureSettings == null) {
+                    textureSettings = Resources.Load<Texture>("settings");
+                }
+                return textureSettings;
+            }
+        }
+        static GUIContent settingsContent;
+        static GUIContent SettingsContent {
+            get {
+                if (settingsContent == null) {
+                    settingsContent = new GUIContent(TextureSettings);
+                }
+                return settingsContent;
+            }
+        }
 
         int selectedModule;
         string[] moduleOptions;
@@ -213,6 +231,7 @@ namespace Autobuilder {
             bool development = false;
 
             EditorGUI.BeginChangeCheck();
+
             GUIContent tContent = new GUIContent("Builds root dir",
                 "All builds will be saved in subfolders of this directory");
             string tBuildPath = CustomEditorGUILayout.DirPathField(tContent, DataPath + "/" + BuildPath,
@@ -225,6 +244,30 @@ namespace Autobuilder {
             PlayerSettings.bundleVersion = EditorGUILayout.TextField(
                 "Version", PlayerSettings.bundleVersion);
 
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(SettingsContent)) {
+                GetWindow<BuildPlayerWindow>();
+            }
+            GUILayout.BeginVertical();
+#if !UNITY_2018_1_OR_NEWER
+            if ( GUILayout.Button("Player settings") ) {
+                EditorApplication.ExecuteMenuItem("Edit/Project Settings/Player");
+            }
+#endif
+            if (GUILayout.Button("Build ALL", GUILayout.ExpandHeight(true))) {
+                makeBuild = true;
+                development = false;
+                buildModules.AddRange(modules);
+            }
+            if (GUILayout.Button("Build ALL development", GUILayout.ExpandHeight(true))) {
+                makeBuild = true;
+                development = true;
+                buildModules.AddRange(modules);
+            }
+            GUILayout.EndVertical();
+
+            GUILayout.BeginVertical();
+
             AutoIncreaseBuild = GUILayout.Toggle(AutoIncreaseBuild, "Automatically increase build number");
             bool tStartWithCurrent = GUILayout.Toggle(StartWithCurrent, "Start with current platform");
             bool tEndWithCurrent = GUILayout.Toggle(EndWithCurrent, "End with current platform");
@@ -235,6 +278,9 @@ namespace Autobuilder {
                     tStartWithCurrent = false;
             }
             SwitchToCurrent = GUILayout.Toggle(SwitchToCurrent, "Switch to current platform when done");
+
+            GUILayout.EndVertical();
+            GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
             selectedModule = EditorGUILayout.Popup(selectedModule, moduleOptions);
@@ -289,8 +335,6 @@ namespace Autobuilder {
                         development = true;
                     }
                     GUILayout.EndHorizontal();
-                } else {
-                    GUILayout.Label("Module " + module.Target + " not installed");
                 }
             }
 
@@ -303,27 +347,6 @@ namespace Autobuilder {
                 SortModules();
                 EditorProjectPrefs.Save();
             }
-            // Buttons
-            GUILayout.BeginHorizontal();
-#if !UNITY_2018_1_OR_NEWER
-            if ( GUILayout.Button("Player settings") ) {
-                EditorApplication.ExecuteMenuItem("Edit/Project Settings/Player");
-            }
-#endif
-            if (GUILayout.Button("Build settings")) {
-                GetWindow<BuildPlayerWindow>();
-            }
-            if (GUILayout.Button("Build ALL")) {
-                makeBuild = true;
-                development = false;
-                buildModules.AddRange(modules);
-            }
-            if (GUILayout.Button("Build ALL development")) {
-                makeBuild = true;
-                development = true;
-                buildModules.AddRange(modules);
-            }
-            GUILayout.EndHorizontal();
 
             if (makeBuild) {
                 BuildGame(modules, development);

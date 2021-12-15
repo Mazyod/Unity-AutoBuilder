@@ -12,6 +12,85 @@ namespace Autobuilder {
         const string DEFINE_SYMBOLS = "DefineSymbols";
         const string BUILD_NUMBER = "BuildNumber";
         const string SORTING_INDEX = "SortingIndex";
+        const int ARROWS_WIDTH = 64;
+        const int ARROWS_HEIGHT = 40;
+
+        static Texture arrowUp;
+        static Texture arrowDown;
+        static Texture ArrowUp {
+            get {
+                if (arrowUp == null) {
+                    arrowUp = Resources.Load<Texture>("little_arrow_up");
+                }
+                return arrowUp;
+            }
+        }
+        static Texture ArrowDown {
+            get {
+                if (arrowDown == null) {
+                    arrowDown = Resources.Load<Texture>("little_arrow_down");
+                }
+                return arrowDown;
+            }
+        }
+        static GUIContent arrowUpContent;
+        static GUIContent ArrowUpContent {
+            get {
+                if (arrowUpContent == null) {
+                    arrowUpContent = new GUIContent(ArrowUp);
+                }
+                return arrowUpContent;
+            }
+        }
+        static GUIContent arrowDownContent;
+        static GUIContent ArrowDownContent {
+            get {
+                if (arrowDownContent == null) {
+                    arrowDownContent = new GUIContent(ArrowDown);
+                }
+                return arrowDownContent;
+            }
+        }
+        static Texture2D buildToggleOff;
+        static Texture2D BuildToggleOff {
+            get {
+                if (buildToggleOff == null) {
+                    buildToggleOff = Resources.Load<Texture2D>("toggle_off");
+                }
+                return buildToggleOff;
+            }
+        }
+        static Texture2D buildToggleOn;
+        static Texture2D BuildToggleOn {
+            get {
+                if (buildToggleOn == null) {
+                    buildToggleOn = Resources.Load<Texture2D>("toggle_build");
+                }
+                return buildToggleOn;
+            }
+        }
+        static GUIStyle buildToggle;
+        static GUIStyle BuildToggle {
+            get {
+                if (buildToggle == null) {
+                    buildToggle = new GUIStyle(GUI.skin.toggle);
+                    buildToggle.normal.background = BuildToggleOff;
+                    buildToggle.onNormal.background = BuildToggleOn;
+                }
+                return buildToggle;
+            }
+        }
+        static GUIStyle overflowLabel;
+        static GUIStyle OverflowLabel {
+            get {
+                if (overflowLabel == null) {
+                    overflowLabel = new GUIStyle(GUI.skin.label);
+                    overflowLabel.wordWrap = true;
+                    overflowLabel.alignment = TextAnchor.MiddleCenter;
+                }
+                return overflowLabel;
+            }
+        }
 
         public abstract BuildTarget Target { get; }
         public abstract BuildTargetGroup TargetGroup { get; }
@@ -41,14 +120,22 @@ namespace Autobuilder {
 
             GUILayout.BeginHorizontal();
 
-            GUILayout.BeginVertical(GUILayout.MaxWidth(80));
-            if (SortingIndex > 0 && GUILayout.Button("^", GUILayout.ExpandHeight(true))) {
-                SortingIndex -= 3;
+            GUILayout.BeginVertical(GUILayout.Width(ARROWS_WIDTH));
+            if (SortingIndex > 0) {
+                if (GUILayout.Button(ArrowUpContent, GUILayout.Height(ARROWS_HEIGHT))) {
+                    SortingIndex -= 3;
+                }
+            } else {
+                GUILayout.Space(ARROWS_WIDTH);
             }
             if (Builder.TargetModuleInstalled(Target)) {
-                Enabled = EditorGUILayout.Toggle("Build", Enabled);
+                Enabled = EditorGUILayout.Toggle(Enabled, BuildToggle,
+                    GUILayout.Width(ARROWS_WIDTH), GUILayout.Height(ARROWS_WIDTH));
+            } else {
+                GUILayout.Label($"Module {ModuleName} not installed", OverflowLabel,
+                    GUILayout.Height(ARROWS_WIDTH), GUILayout.Width(ARROWS_WIDTH));
             }
-            if (GUILayout.Button("v", GUILayout.ExpandHeight(true))) {
+            if (GUILayout.Button(ArrowDownContent, GUILayout.Height(ARROWS_HEIGHT))) {
                 SortingIndex += 3;
             }
             GUILayout.EndVertical();
@@ -75,7 +162,7 @@ namespace Autobuilder {
             // DefineSymbols
             ReorderableListGUI.Title("Define Symbols");
             ReorderableListGUI.ListField(m_DefineSymbolsAdaptor);
-            
+
             // Options
             var unfold = EditorGUILayout.Foldout(GUIUnfold, "Options");
             if (EditorGUI.EndChangeCheck()) {
@@ -144,7 +231,7 @@ namespace Autobuilder {
         protected bool GetBool(string name, bool defaultValue = false) {
             var node = Data[name];
             if (node == null) return defaultValue;
-            return (bool) node;
+            return (bool)node;
         }
 
         protected void SetBool(string name, bool value) {
@@ -154,7 +241,7 @@ namespace Autobuilder {
         protected float GetFloat(string name, float defaultValue = 0) {
             var node = Data[name];
             if (node == null) return defaultValue;
-            return (float) node;
+            return (float)node;
         }
 
         protected void SetFloat(string name, float value) {
@@ -164,7 +251,7 @@ namespace Autobuilder {
         protected int GetInt(string name, int defaultValue = 0) {
             var node = Data[name];
             if (node == null) return defaultValue;
-            return (int) node;
+            return (int)node;
         }
 
         protected void SetInt(string name, int value) {
@@ -174,7 +261,7 @@ namespace Autobuilder {
         protected string GetString(string name, string defaultValue) {
             var node = Data[name];
             if (node == null) return defaultValue;
-            return (string) node;
+            return (string)node;
         }
 
         protected void SetString(string name, string value) {
