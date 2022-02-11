@@ -12,6 +12,7 @@ namespace Autobuilder {
         const string DEFINE_SYMBOLS = "DefineSymbols";
         const string BUILD_NUMBER = "BuildNumber";
         const string SORTING_INDEX = "SortingIndex";
+        const string ASSET_BUNDLE_OPTIONS = "AssetBundleOptions";
         const int ARROWS_WIDTH = 64;
         const int ARROWS_HEIGHT = 40;
 
@@ -114,6 +115,10 @@ namespace Autobuilder {
             get { return PlayerPrefs.GetInt(GUIUnfoldKey, 0) > 0; }
             set { PlayerPrefs.SetInt(GUIUnfoldKey, value ? 1 : 0); }
         }
+        BuildAssetBundleOptions AssetBundleOptions {
+            get { return (BuildAssetBundleOptions) GetInt(ASSET_BUNDLE_OPTIONS); }
+            set { SetInt(ASSET_BUNDLE_OPTIONS, (int) value); }
+        }
 
         public void OnGUI(out bool build, out bool development) {
             var isTarget = IsTarget(EditorUserBuildSettings.activeBuildTarget);
@@ -162,6 +167,9 @@ namespace Autobuilder {
             // DefineSymbols
             ReorderableListGUI.Title("Define Symbols");
             ReorderableListGUI.ListField(m_DefineSymbolsAdaptor);
+            
+            // Asset bundle options
+            AssetBundleOptions = (BuildAssetBundleOptions) EditorGUILayout.EnumFlagsField("Asset Bundle Options", AssetBundleOptions);
 
             // Options
             var unfold = EditorGUILayout.Foldout(GUIUnfold, "Options");
@@ -285,6 +293,10 @@ namespace Autobuilder {
                     scenes.Add(EditorBuildSettings.scenes[i].path);
             }
             return scenes.ToArray();
+        }
+
+        public virtual void BuildAssetBundles() {
+            Builder.BuildAssetBundles(Target);
         }
     }
 }

@@ -18,6 +18,7 @@ namespace Autobuilder {
         const string END_WITH_CURRENT = BUILDER + "EndWithCurrent";
         const string SWITCH_TO_CURRENT = BUILDER + "SwitchToCurrent";
         const string AUTO_INCREASE_BUILD = BUILDER + "AutoIncreaseBuild";
+        const string ASSET_BUNDLES_DIR = "AssetBundlesDir";
         const string DEFAULT_BUILDS_PATH = "Builds";
         public const string BUILD_64 = "_x86_64";
         public const string BUILD_UNIVERSAL = "Universal";
@@ -55,6 +56,10 @@ namespace Autobuilder {
         public static bool AutoIncreaseBuild {
             get { return EditorProjectPrefs.GetBool(AUTO_INCREASE_BUILD, true); }
             set { EditorProjectPrefs.SetBool(AUTO_INCREASE_BUILD, value); }
+        }
+        public static string AssetBundlesDir {
+            get { return EditorProjectPrefs.GetString(ASSET_BUNDLES_DIR, "Assets/StreamingAssets"); }
+            set { EditorProjectPrefs.SetString(ASSET_BUNDLES_DIR, value); }
         }
         #endregion
 
@@ -229,6 +234,7 @@ namespace Autobuilder {
             bool makeBuild = false;
             var buildModules = new List<BuildModule>();
             bool development = false;
+            bool buildAssetBundles = false;
 
             EditorGUI.BeginChangeCheck();
 
@@ -244,16 +250,23 @@ namespace Autobuilder {
             PlayerSettings.bundleVersion = EditorGUILayout.TextField(
                 "Version", PlayerSettings.bundleVersion);
 
+            AssetBundlesDir = EditorGUILayout.TextField("Asset Bundles Directory", AssetBundlesDir);
+
             GUILayout.BeginHorizontal();
+            GUILayout.BeginVertical();
             if (GUILayout.Button(SettingsContent)) {
                 GetWindow<BuildPlayerWindow>();
             }
-            GUILayout.BeginVertical();
+            if (GUILayout.Button("Player settings")) {
 #if !UNITY_2018_1_OR_NEWER
-            if ( GUILayout.Button("Player settings") ) {
                 EditorApplication.ExecuteMenuItem("Edit/Project Settings/Player");
-            }
+#else
+                SettingsService.OpenProjectSettings("Project/Player");
 #endif
+            }
+            GUILayout.EndVertical();
+            GUILayout.BeginVertical();
+
             if (GUILayout.Button("Build ALL", GUILayout.ExpandHeight(true))) {
                 makeBuild = true;
                 development = false;
@@ -262,6 +275,10 @@ namespace Autobuilder {
             if (GUILayout.Button("Build ALL development", GUILayout.ExpandHeight(true))) {
                 makeBuild = true;
                 development = true;
+                buildModules.AddRange(modules);
+            }
+            if (GUILayout.Button("Build ALL Asset Bundles", GUILayout.ExpandHeight(true))) {
+                buildAssetBundles = true;
                 buildModules.AddRange(modules);
             }
             GUILayout.EndVertical();
@@ -334,6 +351,10 @@ namespace Autobuilder {
                         buildModules.Add(module);
                         development = true;
                     }
+                    if (GUILayout.Button("Build Asset Bundles")) {
+                        buildAssetBundles = true;
+                        buildModules.Add(module);
+                    }
                     GUILayout.EndHorizontal();
                 }
             }
@@ -349,7 +370,12 @@ namespace Autobuilder {
             }
 
             if (makeBuild) {
-                BuildGame(modules, development);
+                BuildGame(buildModules, development);
+            }
+            if (buildAssetBundles) {
+                foreach (var module in buildModules) {
+                    module.BuildAssetBundles();
+                }
             }
         }
 
@@ -457,6 +483,15 @@ namespace Autobuilder {
                 if (type.IsSubclassOf(typeof(IBuildPostProcessor)))
                     ((IBuildPostProcessor) Activator.CreateInstance(type)).PostProcess(aTarget, aDevelopment, aReport);
             }
+        }
+
+        public static void BuildAssetBundles(BuildTarget aTarget, BuildAssetBundleOptions aOptions = BuildAssetBundleOptions.None) {
+            var dir = Path.Combine(AssetBundlesDir, aTarget.ToString());
+            if (!Directory.Exists(dir)) {
+                Directory.CreateDirectory(dir);
+            }
+            var manifest = BuildPipeline.BuildAssetBundles(dir, aOptions, aTarget);
+            Debug.Log($"Asset bundles built to {dir}");
         }
     }
 }
