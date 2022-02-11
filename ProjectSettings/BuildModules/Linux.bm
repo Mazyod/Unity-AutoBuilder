@@ -1,7 +1,0 @@
-{
-  "DefineSymbols": [],
-  "BuildLinux64": false,
-  "BuildNumber": 2,
-  "ModuleTarget": "Standalone.StandaloneLinux64",
-  "SortingIndex": 10
-}
